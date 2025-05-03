@@ -1,0 +1,15 @@
+setup.py
+models/__init__.py
+models/modle.py
+models/predict.py
+models/train.py
+new_models/__init__.py
+new_models/predict.py
+new_models/train.py
+new_models/weather_model.py
+new_models/weather_processor.py
+weather_prediction.egg-info/PKG-INFO
+weather_prediction.egg-info/SOURCES.txt
+weather_prediction.egg-info/dependency_links.txt
+weather_prediction.egg-info/requires.txt
+weather_prediction.egg-info/top_level.txt

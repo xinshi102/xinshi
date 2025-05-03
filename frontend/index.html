@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>天气预测可视化系统</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .upload-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .chart-container {
+            height: 400px;
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .button-group {
+            margin-bottom: 20px;
+        }
+        .prediction-section {
+            display: none;
+        }
+        .analysis-section {
+            margin-top: 30px;
+        }
+        .weather-legend {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .weather-code {
+            display: inline-block;
+            margin: 5px;
+            padding: 5px 10px;
+            border-radius: 3px;
+            background-color: #e9ecef;
+        }
+        .nav-tabs {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">天气预测可视化系统</h1>
+        
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="analysis-tab" data-bs-toggle="tab" data-bs-target="#analysis" type="button" role="tab">数据分析</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="prediction-tab" data-bs-toggle="tab" data-bs-target="#prediction" type="button" role="tab">预测分析</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="myTabContent">
+            <!-- 数据分析标签页 -->
+            <div class="tab-pane fade show active" id="analysis" role="tabpanel">
+                <div class="upload-section">
+                    <h3>请上传天气数据文件</h3>
+                    <p>支持CSV格式文件，包含以下字段：</p>
+                    <ul>
+                        <li>time: 时间</li>
+                        <li>temperature_2m (°C): 温度</li>
+                        <li>relativehumidity_2m (%): 湿度</li>
+                        <li>rain (mm): 降水量</li>
+                        <li>weathercode (wmo code): 天气代码</li>
+                        <li>surface_pressure (hPa): 气压</li>
+                        <li>cloudcover (%): 云量</li>
+                        <li>windspeed_10m (m/s): 风速</li>
+                    </ul>
+                    <div class="button-group">
+                        <button id="uploadBtn" class="btn btn-primary">选择文件</button>
+                        <input type="file" id="fileInput" class="form-control" style="display: none;" accept=".csv">
+                    </div>
+                </div>
+
+                <div class="analysis-section" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h3>温度变化趋势</h3>
+                            <div id="temperatureTrendChart" class="chart-container"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h3>湿度变化趋势</h3>
+                            <div id="humidityTrendChart" class="chart-container"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h3>降水量分布</h3>
+                            <div id="precipitationDistributionChart" class="chart-container"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h3>天气类型分布</h3>
+                            <div id="weatherDistributionChart" class="chart-container"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h3>云量分布</h3>
+                            <div id="cloudCoverDistributionChart" class="chart-container"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h3>风速分布</h3>
+                            <div id="windSpeedDistributionChart" class="chart-container"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h3>特征相关性热力图</h3>
+                            <div id="correlationHeatmapChart" class="chart-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 预测分析标签页 -->
+            <div class="tab-pane fade" id="prediction" role="tabpanel">
+                <div class="button-group">
+                    <select id="predictionDuration" class="form-select" style="width: auto; display: inline-block; margin: 0 10px;">
+                        <option value="24">预测1天(24小时)</option>
+                        <option value="48">预测2天(48小时)</option>
+                        <option value="72" selected>预测3天(72小时)</option>
+                    </select>
+                    <button id="startPredictionBtn" class="btn btn-success">启动预测服务</button>
+                </div>
+
+                <!-- 天气代码说明 -->
+                <div id="weatherCodes" class="weather-legend">
+                    <h4>天气代码说明</h4>
+                    <div id="weatherCodeList"></div>
+                </div>
+
+                <!-- 预测结果显示区域 -->
+                <div id="predictionSection" class="prediction-section">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h3>天气类型预测</h3>
+                            <div id="weatherCodeChart" class="chart-container"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h3>温度预测</h3>
+                            <div id="temperatureChart" class="chart-container"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h3>湿度预测</h3>
+                            <div id="humidityChart" class="chart-container"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h3>降水量预测</h3>
+                            <div id="precipitationChart" class="chart-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 上传按钮点击事件
+        document.getElementById('uploadBtn').addEventListener('click', function() {
+            document.getElementById('fileInput').click();
+        });
+
+        // 文件选择事件
+        document.getElementById('fileInput').addEventListener('change', async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const response = await fetch('http://localhost:5000/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                document.querySelector('.upload-section').style.display = 'none';
+                document.querySelector('.analysis-section').style.display = 'block';
+                await loadAnalysisData();
+            } catch (error) {
+                alert('文件上传失败，请重试');
+            }
+        });
+
+        // 加载分析数据并动态初始化ECharts
+        async function loadAnalysisData() {
+            try {
+                const response = await fetch('http://localhost:5000/api/analysis-data');
+                const data = await response.json();
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                // 初始化并渲染各个图表
+                renderTemperatureTrendChart(data.temperatureTrend);
+                renderHumidityTrendChart(data.humidityTrend);
+                renderPrecipitationDistributionChart(data.precipitationDistribution);
+                renderWeatherDistributionChart(data.weatherDistribution);
+                renderCloudCoverDistributionChart(data.cloudCoverDistribution);
+                renderWindSpeedDistributionChart(data.windSpeedDistribution);
+                renderCorrelationHeatmapChart(data.correlationMatrix);
+            } catch (error) {
+                alert('分析数据加载失败');
+            }
+        }
+
+        function renderTemperatureTrendChart(data) {
+            const chart = echarts.init(document.getElementById('temperatureTrendChart'));
+            chart.setOption({
+                title: { text: '温度变化趋势' },
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'category', data: data.times },
+                yAxis: { type: 'value', name: '温度 (°C)' },
+                series: [{ name: '温度', type: 'line', data: data.values }]
+            });
+        }
+        function renderHumidityTrendChart(data) {
+            const chart = echarts.init(document.getElementById('humidityTrendChart'));
+            chart.setOption({
+                title: { text: '湿度变化趋势' },
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'category', data: data.times },
+                yAxis: { type: 'value', name: '湿度 (%)' },
+                series: [{ name: '湿度', type: 'line', data: data.values }]
+            });
+        }
+        function renderWeatherDistributionChart(data) {
+            const chart = echarts.init(document.getElementById('weatherDistributionChart'));
+            chart.setOption({
+                title: { text: '天气类型分布' },
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                xAxis: { type: 'category', data: data.categories },
+                yAxis: { type: 'value' },
+                series: [{ name: '出现次数', type: 'bar', data: data.values }]
+            });
+        }
+        function renderPrecipitationDistributionChart(data) {
+            const chart = echarts.init(document.getElementById('precipitationDistributionChart'));
+            chart.setOption({
+                title: { text: '降水量分布' },
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                xAxis: { type: 'category', data: data.bins },
+                yAxis: { type: 'value' },
+                series: [{ name: '频次', type: 'bar', data: data.counts }]
+            });
+        }
+        function renderWindSpeedDistributionChart(data) {
+            const chart = echarts.init(document.getElementById('windSpeedDistributionChart'));
+            chart.setOption({
+                title: { text: '风速分布' },
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                xAxis: { type: 'category', data: data.bins },
+                yAxis: { type: 'value' },
+                series: [{ name: '频次', type: 'bar', data: data.counts }]
+            });
+        }
+        function renderCloudCoverDistributionChart(data) {
+            const chart = echarts.init(document.getElementById('cloudCoverDistributionChart'));
+            chart.setOption({
+                title: { text: '云量分布' },
+                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                xAxis: { type: 'category', data: data.bins },
+                yAxis: { type: 'value' },
+                series: [{ name: '频次', type: 'bar', data: data.counts }]
+            });
+        }
+        function renderCorrelationHeatmapChart(data) {
+            // 将二维相关系数数组转换为ECharts三元组格式
+            const matrix = [];
+            for (let i = 0; i < data.values.length; i++) {
+                for (let j = 0; j < data.values[i].length; j++) {
+                    matrix.push([i, j, data.values[i][j]]);
+                }
+            }
+            const chart = echarts.init(document.getElementById('correlationHeatmapChart'));
+            chart.setOption({
+                title: { text: '特征相关性热力图' },
+                tooltip: { position: 'top' },
+                grid: { height: '50%', top: '15%' },
+                xAxis: { type: 'category', data: data.categories, splitArea: { show: true } },
+                yAxis: { type: 'category', data: data.categories, splitArea: { show: true } },
+                visualMap: { min: -1, max: 1, calculable: true, orient: 'horizontal', left: 'center', bottom: '15%' },
+                series: [{
+                    name: '相关性',
+                    type: 'heatmap',
+                    data: matrix,
+                    label: { show: true },
+                    emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0, 0, 0, 0.5)' } }
+                }]
+            });
+        }
+
+        // 预测按钮点击事件
+        document.getElementById('startPredictionBtn').addEventListener('click', async function() {
+            const duration = document.getElementById('predictionDuration').value;
+            try {
+                const response = await fetch('http://localhost:5000/api/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ duration: parseInt(duration) })
+                });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                // 显示预测结果区域
+                document.getElementById('predictionSection').style.display = 'block';
+                renderPredictionCharts(data);
+            } catch (error) {
+                alert('预测服务启动失败，请重试');
+            }
+        });
+
+        // 渲染预测结果图表
+        function renderPredictionCharts(data) {
+            // 天气类型预测
+            const weatherCodeChart = echarts.init(document.getElementById('weatherCodeChart'));
+            weatherCodeChart.setOption({
+                title: { text: '天气类型预测' },
+                tooltip: { trigger: 'axis', formatter: function(params) {
+                    const idx = params[0].dataIndex;
+                    return `${params[0].name}<br/>天气代码: ${data.weather_codes[idx]}<br/>天气描述: ${data.weather_descriptions[idx]}`;
+                } },
+                xAxis: { type: 'category', data: data.times },
+                yAxis: { name: '天气代码', type: 'category', data: [...new Set(data.weather_codes)] },
+                series: [{ name: '天气类型', type: 'line', data: data.weather_codes }]
+            });
+            // 温度预测
+            const temperatureChart = echarts.init(document.getElementById('temperatureChart'));
+            temperatureChart.setOption({
+                title: { text: '温度预测' },
+                xAxis: { type: 'category', data: data.times },
+                yAxis: { name: '温度 (°C)' },
+                series: [{ name: '温度', type: 'line', data: data.temperatures }]
+            });
+            // 湿度预测
+            const humidityChart = echarts.init(document.getElementById('humidityChart'));
+            humidityChart.setOption({
+                title: { text: '湿度预测' },
+                xAxis: { type: 'category', data: data.times },
+                yAxis: { name: '湿度 (%)' },
+                series: [{ name: '湿度', type: 'line', data: data.humidities }]
+            });
+            // 降水量预测
+            const precipitationChart = echarts.init(document.getElementById('precipitationChart'));
+            precipitationChart.setOption({
+                title: { text: '降水量预测' },
+                xAxis: { type: 'category', data: data.times },
+                yAxis: { name: '降水量 (mm)' },
+                series: [{ name: '降水量', type: 'line', data: data.precipitations }]
+            });
+        }
+    </script>
+</body>
+</html> 

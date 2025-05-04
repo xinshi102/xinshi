@@ -14,8 +14,8 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 root_dir = os.path.dirname(current_dir)
 sys.path.append(root_dir)
 
-from new_models.predict import make_predictions
-from new_models.weather_processor import WeatherDataProcessor
+from model.predict import make_predictions
+from model.weather_processor import WeatherDataProcessor
 
 app = Flask(__name__)
 CORS(app, resources={

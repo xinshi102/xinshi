@@ -10,7 +10,7 @@ plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
 plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
 
 # 定义分析结果保存路径
-ANALYSIS_DIR = 'weather_data/data_analysis'
+ANALYSIS_DIR = 'data/data_analysis'
 
 def load_data(file_path):
     """加载天气数据"""
@@ -129,7 +129,7 @@ def main():
     os.makedirs(ANALYSIS_DIR, exist_ok=True)
     
     # 加载数据
-    data_path = 'weather_data/data_w/1y.csv'
+    data_path = 'data/data_w/1y.csv'
     df = load_data(data_path)
     
     # 执行各项分析

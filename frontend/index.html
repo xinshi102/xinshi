@@ -109,7 +109,6 @@
             <!-- 加载动画和错误提示 -->
             <div class="loading-spinner" id="loadingSpinner">
                 <div class="spinner"></div>
-                <p class="mt-2">正在处理数据，请稍候...</p>
             </div>
             <div class="alert alert-danger" id="errorAlert" style="display: none;">
                 <span id="errorMessage"></span>
@@ -176,14 +175,13 @@
             <div id="prediction" class="tab-content-area" style="display:none;">
                 <div class="button-group">
                     <select id="predictionDuration" class="form-select" style="width: auto; display: inline-block; margin: 0 10px;">
-                        <option value="24">预测1天(24小时)</option>
-                        <option value="48">预测2天(48小时)</option>
-                        <option value="72" selected>预测3天(72小时)</option>
+                        <option value="24">预测1天(24h)</option>
+                        <option value="48">预测2天(48h)</option>
+                        <option value="72" selected>预测3天(72h)</option>
                     </select>
                     <button id="startPredictionBtn" class="btn btn-success">启动预测服务</button>
                 </div>
                 <div id="weatherCodes" class="weather-legend">
-                    <h4>天气代码说明</h4>
                     <div id="weatherCodeList"></div>
                 </div>
                 <div id="predictionSection" class="prediction-section">

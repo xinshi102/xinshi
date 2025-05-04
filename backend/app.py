@@ -122,13 +122,16 @@ def upload_file():
         print(traceback.format_exc())
         return jsonify({'error': error_msg}), 500
 
-@app.route('/api/predict', methods=['POST'])
+@app.route('/api/predict', methods=['GET', 'POST'])
 def predict():
     try:
         print("\n=== 开始预测过程 ===")
         # 获取预测时长参数
-        data = request.get_json()
-        duration = data.get('duration', 72)  # 默认72小时
+        if request.method == 'POST':
+            data = request.get_json()
+            duration = data.get('duration', 72) if data else 72
+        else:
+            duration = int(request.args.get('duration', 72))
         print(f"预测时长: {duration}小时")
         
         # 检查上传目录中是否有文件

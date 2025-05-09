@@ -8,14 +8,18 @@ import sys
 import traceback
 import torch
 import json
+import math
 
 # 添加项目根目录到Python路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
 root_dir = os.path.dirname(current_dir)
 sys.path.append(root_dir)
 
+# 添加weather_processor模块到Python路径
+sys.path.append(os.path.join(os.path.dirname(__file__), '../model'))
+
 from model.predict import make_predictions
-from model.weather_processor import WeatherDataProcessor
+from weather_processor import WeatherDataProcessor
 
 app = Flask(__name__)
 CORS(app, resources={
@@ -53,6 +57,16 @@ WEATHER_CODES = {
     8: "中雪",
     9: "大雪"
 }
+
+def replace_nan(obj):
+    if isinstance(obj, float) and math.isnan(obj):
+        return None
+    elif isinstance(obj, list):
+        return [replace_nan(x) for x in obj]
+    elif isinstance(obj, dict):
+        return {k: replace_nan(v) for k, v in obj.items()}
+    else:
+        return obj
 
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
@@ -273,8 +287,22 @@ def get_analysis_data():
                             'surface_pressure (hPa)', 'cloudcover (%)', 'windspeed_10m (m/s)']].corr().values.tolist()
             }
         }
-        
+        analysis_data = replace_nan(analysis_data)
         return jsonify(analysis_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/current-weather', methods=['GET'])
+def get_current_weather():
+    try:
+        upload_dir = os.path.join(root_dir, 'uploads')
+        files = os.listdir(upload_dir)
+        if not files:
+            return jsonify({'error': '请先上传数据文件'}), 400
+        latest_file = max([os.path.join(upload_dir, f) for f in files], key=os.path.getctime)
+        df = pd.read_csv(latest_file)
+        weather_code = int(df['weathercode (wmo code)'].iloc[-1])
+        return jsonify({'weather_code': weather_code})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

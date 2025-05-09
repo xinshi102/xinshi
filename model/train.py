@@ -13,7 +13,6 @@ from weather_model import WeatherLSTM
 import pickle
 from datetime import datetime
 import torch.nn.functional as F
-
 # 设置编码
 sys.stdout.reconfigure(encoding='utf-8')
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
@@ -54,11 +53,11 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
     
     # 初始任务权重
     task_weights = {
-        'weather': 1.0,
-        'temp': 1.0,
-        'humidity': 1.0,
-        'precip': 1.0,
-        'weather_precip_correlation': 0.5
+        'weather':0.15,
+        'temp': 0.2,
+        'humidity': 0.2,
+        'precip': 0.25,
+        'weather_precip_correlation': 0.2
     }
     
     # 权重调整参数
@@ -101,31 +100,26 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
         loss_ratios = {task: loss / total_loss for task, loss in task_losses.items()}
         new_weights = current_weights.copy()
         
-        # 根据损失比例调整权重
+        # 根据损失比例和当前权重的差异来调整
         for task in new_weights:
-            if loss_ratios[task] > 0.4:  # 损失占比过大
-                new_weights[task] = max(
-                    weight_clip_min,
-                    min(
-                        weight_clip_max,
-                        new_weights[task] * (1 - weight_adjust_rate)
-                    )
-                )
-            elif loss_ratios[task] < 0.1:  # 损失占比过小
-                new_weights[task] = max(
-                    weight_clip_min,
-                    min(
-                        weight_clip_max,
-                        new_weights[task] * (1 + weight_adjust_rate)
-                    )
-                )
+            # 计算目标权重（基于损失比例）
+            target_weight = loss_ratios[task]
+            
+            # 如果当前权重与目标权重差异较大，则进行调整
+            if abs(current_weights[task] - target_weight) > 0.05:  # 差异阈值
+                # 缓慢向目标权重移动
+                new_weights[task] = current_weights[task] + (target_weight - current_weights[task]) * 0.1
+        
+        # 确保权重在合理范围内
+        for task in new_weights:
+            new_weights[task] = max(0.15, min(0.35, new_weights[task]))
         
         # 归一化权重
         weight_sum = sum(new_weights.values())
         if weight_sum > 0:
             for task in new_weights:
                 new_weights[task] = new_weights[task] / weight_sum
-                
+        
         return new_weights
     
     for epoch in range(num_epochs):
@@ -346,11 +340,8 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
 def main():
     # 设置随机种子
     torch.manual_seed(42)
-    
-    # 获取当前文件所在目录的绝对路径
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    # 构建数据文件的绝对路径
-    data_path = os.path.join(current_dir, '..', 'data', 'data_w', '1y.csv')  
+    current_dir = os.path.dirname(os.path.abspath(__file__))#获取当前文件所在目录的绝对路径
+    data_path = os.path.join(current_dir, '..', 'data', 'data_w', '1y.csv')  #构建数据文件的绝对路径
     print(f"\n正在加载数据文件: {data_path}")
     data = pd.read_csv(data_path, parse_dates=['time'], index_col='time')
     print(f"原始数据形状: {data.shape}")
@@ -362,7 +353,6 @@ def main():
     print("正在拟合处理器...")
     processed_data = processor.fit(data)  # 在训练数据上拟合编码器和标准化器
     print(f"拟合后的数据形状: {processed_data.shape}")
-    
     print("正在预处理数据...")
     processed_data = processor.preprocess_data(data)
     print(f"预处理后的数据形状: {processed_data.shape}")

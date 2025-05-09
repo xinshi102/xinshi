@@ -68,6 +68,9 @@ class WeatherDataProcessor:
         df['day_of_week'] = df.index.dayofweek
         df['month'] = df.index.month
         
+        # 对降水量进行对数变换
+        df['rain (mm)'] = np.log1p(df['rain (mm)'])
+        
         # 根据降雨量调整天气代码
         def adjust_weather_code(row):
             rain = row['rain (mm)']
@@ -117,17 +120,14 @@ class WeatherDataProcessor:
         self.means = self.scaler.mean_
         self.stds = self.scaler.scale_
         
-        # 拟合天气编码器 - 使用所有可能的天气代码
-        # 创建一个包含所有可能天气代码的数组
+        # 拟合天气编码器
         all_weather_codes = np.array(self.weather_codes)
-        # 将当前数据中的天气代码添加到数组中
         current_codes = all_features['weathercode (wmo code)'].astype(int).unique()
         all_weather_codes = np.unique(np.concatenate([all_weather_codes, current_codes]))
-        # 拟合编码器
         self.weather_encoder.fit(all_weather_codes)
         
         self.is_fitted = True
-        return all_features  # 返回处理后的数据用于验证
+        return all_features
     
     def adjust_weather_code(self, row):
         """根据降雨量和当前天气状况智能调整天气代码"""
@@ -158,6 +158,9 @@ class WeatherDataProcessor:
         df['hour'] = df.index.hour
         df['day_of_week'] = df.index.dayofweek
         df['month'] = df.index.month
+        
+        # 对降水量进行对数变换
+        df['rain (mm)'] = np.log1p(df['rain (mm)'])
         
         # 使用改进后的天气代码调整方法
         df['weathercode (wmo code)'] = df.apply(self.adjust_weather_code, axis=1)
@@ -265,7 +268,9 @@ class WeatherDataProcessor:
         # 确保温度和湿度在合理范围内
         original_targets[:, 0] = np.clip(original_targets[:, 0], -20, 40)  # 温度范围
         original_targets[:, 1] = np.clip(original_targets[:, 1], 0, 100)   # 湿度范围
-        original_targets[:, 2] = np.maximum(original_targets[:, 2], 0)     # 降水量非负
+        
+        # 对降水量进行指数变换
+        original_targets[:, 2] = np.expm1(original_targets[:, 2])
         
         return original_targets
 

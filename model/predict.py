@@ -4,7 +4,7 @@ import torch
 import pandas as pd
 import numpy as np
 from model.weather_model import WeatherLSTM
-from model.weather_processor import WeatherDataProcessor
+from weather_processor import WeatherDataProcessor
 import matplotlib.pyplot as plt
 import pickle
 
@@ -12,6 +12,8 @@ import pickle
 sys.stdout.reconfigure(encoding='utf-8')
 plt.rcParams['font.sans-serif'] = ['SimHei']
 plt.rcParams['axes.unicode_minus'] = False
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 def load_model_and_processor(model_path, processor_path, input_size=36, hidden_size=96, num_layers=1, output_size=72):
     """加载模型和处理器"""

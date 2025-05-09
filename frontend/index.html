@@ -3,493 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>天气预测可视化系统</title>
+    <title>天气预测系统</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link rel="stylesheet" href="bootstrap-icons/bootstrap-icons-1.12.1/bootstrap-icons.css">
+    <link rel="stylesheet" href="styles.css">
     <style>
-        :root {
-            --primary-color: #4a90e2;
-            --secondary-color: #50c878;
-            --background-color: #f8f9fa;
-            --text-color: #333;
-            --border-color: #e0e0e0;
-            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            --transition-speed: 0.3s;
-        }
-
-        body {
-            background-color: var(--background-color);
-            color: var(--text-color);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        .main-layout {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: 200px;
-            background: #fff;
-            box-shadow: var(--card-shadow);
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-            padding: 30px 0 0 0;
-        }
-
-        .sidebar .nav-btn {
-            background: none;
-            border: none;
-            outline: none;
-            color: var(--text-color);
-            font-size: 1.1rem;
-            padding: 18px 32px;
-            text-align: left;
-            cursor: pointer;
-            transition: background var(--transition-speed);
-        }
-
-        .sidebar .nav-btn.active,
-        .sidebar .nav-btn:hover {
-            background: var(--primary-color);
-            color: #fff;
-        }
-
-        .content-area {
-            flex: 1;
-            padding: 40px 40px 40px 40px;
-            min-width: 0;
-        }
-
-        .chart-container {
-            min-height: 400px !important;
-            height: 400px !important;
-            background: white;
-            border-radius: 12px;
-            box-shadow: var(--card-shadow);
-            margin-bottom: 2rem;
-            padding: 1.5rem;
-        }
-
-        .upload-section {
-            background: white;
-            border-radius: 12px;
+        .welcome-section {
+            text-align: center;
             padding: 2rem;
-            box-shadow: var(--card-shadow);
-            margin-bottom: 2rem;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            margin-top: 2rem;
         }
-
-        .button-group {
-            margin-bottom: 20px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 2rem 0;
         }
-
-        @media (max-width: 900px) {
-            .main-layout { flex-direction: column; }
-            .sidebar { flex-direction: row; width: 100%; box-shadow: none; padding: 0; }
-            .sidebar .nav-btn { flex: 1; text-align: center; padding: 16px 0; }
-            .content-area { padding: 20px 5px; }
+        .feature-list li {
+            margin: 1rem 0;
+            color: #666;
+            line-height: 1.6;
         }
     </style>
 </head>
 <body>
-    <div class="main-layout">
-        <!-- 左侧侧边栏导航 -->
-        <div class="sidebar">
-            <button class="nav-btn active" id="nav-analysis">数据分析</button>
-            <button class="nav-btn" id="nav-predict">预测分析</button>
+    <!-- 侧边导航栏 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3>天气预测系统</h3>
         </div>
-        <!-- 右侧内容区 -->
-        <div class="content-area">
-            <h1 class="mb-4">天气预测可视化系统</h1>
-            <!-- 加载动画和错误提示 -->
-            <div class="loading-spinner" id="loadingSpinner">
-                <div class="spinner"></div>
-            </div>
-            <div class="alert alert-danger" id="errorAlert" style="display: none;">
-                <span id="errorMessage"></span>
-            </div>
-            <!-- 内容区tab -->
-            <div id="analysis" class="tab-content-area">
-                <div class="upload-section text-center">
-                    <h3>请上传天气数据文件</h3>
-                    <p class="text-muted">支持CSV格式文件，包含以下字段：</p>
-                    <ul style="text-align:left;display:inline-block;">
-                        <li>time: 时间</li>
-                        <li>temperature_2m (°C): 温度</li>
-                        <li>relativehumidity_2m (%): 湿度</li>
-                        <li>rain (mm): 降水量</li>
-                        <li>weathercode (wmo code): 天气代码</li>
-                        <li>surface_pressure (hPa): 气压</li>
-                        <li>cloudcover (%): 云量</li>
-                        <li>windspeed_10m (m/s): 风速</li>
-                    </ul>
-                    <div class="mt-4">
-                        <button id="uploadBtn" class="btn btn-primary">选择文件</button>
-                        <input type="file" id="fileInput" class="form-control" style="display: none;" accept=".csv">
-                    </div>
-                </div>
-                <div class="analysis-section" style="display: none;">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h3>温度变化趋势</h3>
-                            <div id="temperatureTrendChart" class="chart-container"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <h3>湿度变化趋势</h3>
-                            <div id="humidityTrendChart" class="chart-container"></div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h3>降水量分布</h3>
-                            <div id="precipitationDistributionChart" class="chart-container"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <h3>天气类型分布</h3>
-                            <div id="weatherDistributionChart" class="chart-container"></div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h3>云量分布</h3>
-                            <div id="cloudCoverDistributionChart" class="chart-container"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <h3>风速分布</h3>
-                            <div id="windSpeedDistributionChart" class="chart-container"></div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <h3>特征相关性热力图</h3>
-                            <div id="correlationHeatmapChart" class="chart-container"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div id="prediction" class="tab-content-area" style="display:none;">
-                <div class="button-group">
-                    <select id="predictionDuration" class="form-select" style="width: auto; display: inline-block; margin: 0 10px;">
-                        <option value="24">预测1天(24h)</option>
-                        <option value="48">预测2天(48h)</option>
-                        <option value="72" selected>预测3天(72h)</option>
-                    </select>
-                    <button id="startPredictionBtn" class="btn btn-success">启动预测服务</button>
-                </div>
-                <div id="weatherCodes" class="weather-legend">
-                    <div id="weatherCodeList"></div>
-                </div>
-                <div id="predictionSection" class="prediction-section">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h3>天气类型预测</h3>
-                            <div id="weatherCodeChart" class="chart-container"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <h3>温度预测</h3>
-                            <div id="temperatureChart" class="chart-container"></div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h3>湿度预测</h3>
-                            <div id="humidityChart" class="chart-container"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <h3>降水量预测</h3>
-                            <div id="precipitationChart" class="chart-container"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <ul class="sidebar-menu">
+            <li>
+                <a href="index.html">
+                    <i class="bi bi-house"></i>
+                    首页
+                </a>
+            </li>
+            <li>
+                <a href="data_analysis.html">
+                    <i class="bi bi-graph-up"></i>
+                    数据分析
+                </a>
+            </li>
+            <li>
+                <a href="weather_prediction.html">
+                    <i class="bi bi-cloud-sun"></i>
+                    天气预测
+                </a>
+            </li>
+            <li>
+                <a href="travel_advice.html">
+                    <i class="bi bi-umbrella"></i>
+                    出行建议
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- 主内容区域 -->
+    <div class="main-content">
+        <div class="welcome-section">
+            <h1>欢迎使用天气预测系统</h1>
+            <ul class="feature-list">
+                <li>📊 天气数据分析：查看历史天气数据统计和趋势</li>
+                <li>🌤️ 天气预测：基于历史数据预测未来天气状况</li>
+                <li>🌂 出行建议：根据天气状况提供出行建议</li>
+            </ul>
         </div>
     </div>
-    <script>
-        // 显示加载动画
-        function showLoading() {
-            document.getElementById('loadingSpinner').style.display = 'block';
-        }
-
-        // 隐藏加载动画
-        function hideLoading() {
-            document.getElementById('loadingSpinner').style.display = 'none';
-        }
-
-        // 显示错误信息
-        function showError(message) {
-            const errorAlert = document.getElementById('errorAlert');
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.textContent = message;
-            errorAlert.style.display = 'block';
-            setTimeout(() => {
-                errorAlert.style.display = 'none';
-            }, 5000);
-        }
-
-        // 上传按钮点击事件
-        document.getElementById('uploadBtn').addEventListener('click', function() {
-            document.getElementById('fileInput').click();
-        });
-
-        // 文件选择事件
-        document.getElementById('fileInput').addEventListener('change', async function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            showLoading();
-            const formData = new FormData();
-            formData.append('file', file);
-            
-            try {
-                const response = await fetch('http://localhost:5000/api/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                document.querySelector('.upload-section').style.display = 'none';
-                document.querySelector('.analysis-section').style.display = 'block';
-                await loadAnalysisData();
-            } catch (error) {
-                showError('文件上传失败，请重试');
-            } finally {
-                hideLoading();
-            }
-        });
-
-        // 安全初始化echarts实例，避免重复绑定和宽高为0问题
-        function safeInitEcharts(domId) {
-            const dom = document.getElementById(domId);
-            if (!dom) return null;
-            if (echarts.getInstanceByDom(dom)) {
-                echarts.dispose(dom);
-            }
-            return echarts.init(dom);
-        }
-
-        // ========== 数据分析区图表渲染 ==========
-        function renderTemperatureTrendChart(data) {
-            window.temperatureTrendChart = safeInitEcharts('temperatureTrendChart');
-            window.temperatureTrendChart.setOption({
-                title: { 
-                    text: '温度变化趋势',
-                    textStyle: { fontSize: 16, fontWeight: 'normal' }
-                },
-                tooltip: { 
-                    trigger: 'axis',
-                    formatter: function(params) {
-                        return `时间: ${params[0].name}<br/>温度: ${params[0].value}°C`;
-                    }
-                },
-                xAxis: { type: 'category', data: data.times, axisLabel: { rotate: 45 } },
-                yAxis: { type: 'value', name: '温度 (°C)', nameTextStyle: { padding: [0, 0, 0, 40] } },
-                series: [{ name: '温度', type: 'line', data: data.values, smooth: true, symbol: 'circle', symbolSize: 6, lineStyle: { width: 2 }, itemStyle: { color: '#4a90e2' } }],
-                grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true }
-            });
-        }
-        function renderHumidityTrendChart(data) {
-            window.humidityTrendChart = safeInitEcharts('humidityTrendChart');
-            window.humidityTrendChart.setOption({
-                title: { text: '湿度变化趋势' },
-                tooltip: { trigger: 'axis' },
-                xAxis: { type: 'category', data: data.times },
-                yAxis: { type: 'value', name: '湿度 (%)' },
-                series: [{ name: '湿度', type: 'line', data: data.values }]
-            });
-        }
-        function renderWeatherDistributionChart(data) {
-            window.weatherDistributionChart = safeInitEcharts('weatherDistributionChart');
-            window.weatherDistributionChart.setOption({
-                title: { text: '天气类型分布' },
-                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-                xAxis: { type: 'category', data: data.categories },
-                yAxis: { type: 'value' },
-                series: [{ name: '出现次数', type: 'bar', data: data.values }]
-            });
-        }
-        function renderPrecipitationDistributionChart(data) {
-            window.precipitationDistributionChart = safeInitEcharts('precipitationDistributionChart');
-            window.precipitationDistributionChart.setOption({
-                title: { text: '降水量分布' },
-                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-                xAxis: { type: 'category', data: data.bins },
-                yAxis: { type: 'value' },
-                series: [{ name: '频次', type: 'bar', data: data.counts }]
-            });
-        }
-        function renderWindSpeedDistributionChart(data) {
-            window.windSpeedDistributionChart = safeInitEcharts('windSpeedDistributionChart');
-            window.windSpeedDistributionChart.setOption({
-                title: { text: '风速分布' },
-                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-                xAxis: { type: 'category', data: data.bins },
-                yAxis: { type: 'value' },
-                series: [{ name: '频次', type: 'bar', data: data.counts }]
-            });
-        }
-        function renderCloudCoverDistributionChart(data) {
-            window.cloudCoverDistributionChart = safeInitEcharts('cloudCoverDistributionChart');
-            window.cloudCoverDistributionChart.setOption({
-                title: { text: '云量分布' },
-                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-                xAxis: { type: 'category', data: data.bins },
-                yAxis: { type: 'value' },
-                series: [{ name: '频次', type: 'bar', data: data.counts }]
-            });
-        }
-        function renderCorrelationHeatmapChart(data) {
-            window.correlationHeatmapChart = safeInitEcharts('correlationHeatmapChart');
-            // 将二维相关系数数组转换为ECharts三元组格式
-            const matrix = [];
-            for (let i = 0; i < data.values.length; i++) {
-                for (let j = 0; j < data.values[i].length; j++) {
-                    matrix.push([i, j, data.values[i][j]]);
-                }
-            }
-            window.correlationHeatmapChart.setOption({
-                title: { text: '特征相关性热力图' },
-                tooltip: { position: 'top' },
-                grid: { height: '50%', top: '15%' },
-                xAxis: { type: 'category', data: data.categories, splitArea: { show: true } },
-                yAxis: { type: 'category', data: data.categories, splitArea: { show: true } },
-                visualMap: { min: -1, max: 1, calculable: true, orient: 'horizontal', left: 'center', bottom: '15%' },
-                series: [{ name: '相关性', type: 'heatmap', data: matrix, label: { show: true }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0, 0, 0, 0.5)' } } }]
-            });
-        }
-
-        // ========== 预测区图表渲染 ==========
-        function renderPredictionCharts(data) {
-            window.weatherCodeChart = safeInitEcharts('weatherCodeChart');
-            window.weatherCodeChart.setOption({
-                title: { text: '天气类型预测' },
-                tooltip: { trigger: 'axis', formatter: function(params) {
-                    const idx = params[0].dataIndex;
-                    return `${params[0].name}<br/>天气代码: ${data.weather_codes[idx]}<br/>天气描述: ${data.weather_descriptions[idx]}`;
-                } },
-                xAxis: { type: 'category', data: data.times },
-                yAxis: { name: '天气代码', type: 'category', data: [...new Set(data.weather_codes)] },
-                series: [{ name: '天气类型', type: 'line', data: data.weather_codes }]
-            });
-            window.temperatureChart = safeInitEcharts('temperatureChart');
-            window.temperatureChart.setOption({
-                title: { text: '温度预测' },
-                xAxis: { type: 'category', data: data.times },
-                yAxis: { name: '温度 (°C)' },
-                series: [{ name: '温度', type: 'line', data: data.temperatures }]
-            });
-            window.humidityChart = safeInitEcharts('humidityChart');
-            window.humidityChart.setOption({
-                title: { text: '湿度预测' },
-                xAxis: { type: 'category', data: data.times },
-                yAxis: { name: '湿度 (%)' },
-                series: [{ name: '湿度', type: 'line', data: data.humidities }]
-            });
-            window.precipitationChart = safeInitEcharts('precipitationChart');
-            window.precipitationChart.setOption({
-                title: { text: '降水量预测' },
-                xAxis: { type: 'category', data: data.times },
-                yAxis: { name: '降水量 (mm)' },
-                series: [{ name: '降水量', type: 'line', data: data.precipitations }]
-            });
-        }
-
-        // ========== 数据加载与tab切换逻辑 ==========
-        // 数据分析区加载
-        async function loadAnalysisData() {
-            showLoading();
-            try {
-                const response = await fetch('http://localhost:5000/api/analysis-data');
-                const data = await response.json();
-                console.log('分析数据返回:', data); // 调试用
-                if (data.error) {
-                    alert(data.error);
-                    return;
-                }
-                window.lastAnalysisData = data;
-                renderTemperatureTrendChart(data.temperatureTrend);
-                renderHumidityTrendChart(data.humidityTrend);
-                renderPrecipitationDistributionChart(data.precipitationDistribution);
-                renderWeatherDistributionChart(data.weatherDistribution);
-                renderCloudCoverDistributionChart(data.cloudCoverDistribution);
-                renderWindSpeedDistributionChart(data.windSpeedDistribution);
-                renderCorrelationHeatmapChart(data.correlationMatrix);
-            } catch (error) {
-                showError('分析数据加载失败');
-            } finally {
-                hideLoading();
-            }
-        }
-
-        // 预测区加载
-        document.getElementById('startPredictionBtn').addEventListener('click', async function() {
-            showLoading();
-            try {
-                const duration = document.getElementById('predictionDuration').value;
-                const response = await fetch(`http://localhost:5000/api/predict?duration=${duration}`);
-                const data = await response.json();
-                
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                
-                console.log('预测数据返回:', data);
-                console.log('times:', data.times);
-                console.log('weather_codes:', data.weather_codes);
-                console.log('temperatures:', data.temperatures);
-                console.log('humidities:', data.humidities);
-                console.log('precipitations:', data.precipitations);
-                window.lastPredictionData = data;
-                document.getElementById('predictionSection').style.display = 'block';
-                // 渲染预测结果图表
-                renderPredictionCharts(data);
-            } catch (error) {
-                showError('预测服务启动失败: ' + error.message);
-            } finally {
-                hideLoading();
-            }
-        });
-
-        // 左侧导航切换逻辑
-        const navAnalysis = document.getElementById('nav-analysis');
-        const navPredict = document.getElementById('nav-predict');
-        const analysisTab = document.getElementById('analysis');
-        const predictTab = document.getElementById('prediction');
-        navAnalysis.onclick = function() {
-            navAnalysis.classList.add('active');
-            navPredict.classList.remove('active');
-            analysisTab.style.display = '';
-            predictTab.style.display = 'none';
-            // 切换时重新渲染分析区图表
-            if (window.lastAnalysisData) {
-                renderTemperatureTrendChart(window.lastAnalysisData.temperatureTrend);
-                renderHumidityTrendChart(window.lastAnalysisData.humidityTrend);
-                renderPrecipitationDistributionChart(window.lastAnalysisData.precipitationDistribution);
-                renderWeatherDistributionChart(window.lastAnalysisData.weatherDistribution);
-                renderCloudCoverDistributionChart(window.lastAnalysisData.cloudCoverDistribution);
-                renderWindSpeedDistributionChart(window.lastAnalysisData.windSpeedDistribution);
-                renderCorrelationHeatmapChart(window.lastAnalysisData.correlationMatrix);
-            }
-        };
-        navPredict.onclick = function() {
-            navPredict.classList.add('active');
-            navAnalysis.classList.remove('active');
-            analysisTab.style.display = 'none';
-            predictTab.style.display = '';
-            // 切换时重新渲染预测区图表
-            if (window.lastPredictionData) {
-                renderPredictionCharts(window.lastPredictionData);
-            }
-        };
-        // 默认显示分析区
-        navAnalysis.click();
-    </script>
 </body>
 </html> 

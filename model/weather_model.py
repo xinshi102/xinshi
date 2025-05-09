@@ -62,32 +62,39 @@ class WeatherLSTM(nn.Module):
         )
         
         # 改进的降水预测系统
+        self.precip_attention = nn.Sequential(
+            nn.Linear(hidden_size // 2, hidden_size // 4),
+            nn.Tanh(),
+            nn.Linear(hidden_size // 4, 1)
+        )
+        
         self.precip_base = nn.Sequential(
             nn.Linear(hidden_size // 2, hidden_size // 4),
             nn.ReLU(),
             nn.LayerNorm(hidden_size // 4),
-            nn.Linear(hidden_size // 4, 1),
-            nn.ReLU()  # 确保降水量非负
-        )
-        
-        # 天气代码到降水的转换层 - 使用多层感知机
-        self.weather_to_precip = nn.Sequential(
-            nn.Linear(weather_categories, hidden_size // 4),
-            nn.ReLU(),
-            nn.LayerNorm(hidden_size // 4),
-            nn.Dropout(0.2),
             nn.Linear(hidden_size // 4, hidden_size // 8),
             nn.ReLU(),
             nn.Linear(hidden_size // 8, 1),
             nn.ReLU()  # 确保降水量非负
         )
         
-        # 降水融合层
-        self.precip_fusion = nn.Sequential(
-            nn.Linear(2, hidden_size // 8),
+        # 降水量到天气代码的转换层
+        self.precip_to_weather = nn.Sequential(
+            nn.Linear(1, hidden_size // 4),
             nn.ReLU(),
-            nn.Linear(hidden_size // 8, 1),
-            nn.ReLU()  # 确保降水量非负
+            nn.LayerNorm(hidden_size // 4),
+            nn.Dropout(0.2),
+            nn.Linear(hidden_size // 4, hidden_size // 8),
+            nn.ReLU(),
+            nn.Linear(hidden_size // 8, weather_categories)
+        )
+        
+        # 天气代码融合层
+        self.weather_fusion = nn.Sequential(
+            nn.Linear(weather_categories * 2, hidden_size // 4),
+            nn.ReLU(),
+            nn.LayerNorm(hidden_size // 4),
+            nn.Linear(hidden_size // 4, weather_categories)
         )
         
         # 温度范围参数
@@ -118,8 +125,8 @@ class WeatherLSTM(nn.Module):
         # 应用注意力机制
         attended_features = shared_features * attention_weights
         
-        # 预测天气代码
-        weather_pred = self.weather_classifier(attended_features)
+        # 基础天气代码预测
+        base_weather_pred = self.weather_classifier(attended_features)
         
         # 基础预测
         temp_pred = self.temp_regressor(shared_features)
@@ -130,14 +137,21 @@ class WeatherLSTM(nn.Module):
         # 将湿度映射到0-100%
         humidity_pred = humidity_pred * 100.0
         
-        base_precip = self.precip_base(shared_features)
+        # 计算降水量注意力权重
+        precip_attention = self.precip_attention(shared_features)
+        precip_attention = F.softmax(precip_attention, dim=1)
         
-        # 从天气代码预测降水
-        weather_probs = F.softmax(weather_pred, dim=-1)
-        weather_precip = self.weather_to_precip(weather_probs)
+        # 应用降水量注意力机制
+        precip_features = shared_features * precip_attention
         
-        # 融合降水预测
-        precip_inputs = torch.cat([base_precip, weather_precip], dim=-1)
-        precip_pred = self.precip_fusion(precip_inputs)
+        # 预测降水量
+        precip_pred = self.precip_base(precip_features)
+        
+        # 从降水量预测天气代码
+        precip_weather_pred = self.precip_to_weather(precip_pred)
+        
+        # 融合天气代码预测
+        weather_inputs = torch.cat([base_weather_pred, precip_weather_pred], dim=-1)
+        weather_pred = self.weather_fusion(weather_inputs)
         
         return weather_pred, temp_pred, humidity_pred, precip_pred 

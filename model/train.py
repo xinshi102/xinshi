@@ -341,7 +341,7 @@ def main():
     # 设置随机种子
     torch.manual_seed(42)
     current_dir = os.path.dirname(os.path.abspath(__file__))#获取当前文件所在目录的绝对路径
-    data_path = os.path.join(current_dir, '..', 'data', 'data_w', '1y.csv')  #构建数据文件的绝对路径
+    data_path = os.path.join(current_dir, '..', 'data', 'data_w', '5y.csv')  #构建数据文件的绝对路径
     print(f"\n正在加载数据文件: {data_path}")
     data = pd.read_csv(data_path, parse_dates=['time'], index_col='time')
     print(f"原始数据形状: {data.shape}")

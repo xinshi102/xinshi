@@ -2,15 +2,19 @@ import pandas as pd
 import os
 from datetime import datetime
 
-def merge_weather_files(input_dir='data', output_file='merged_weather_data.csv'):
+def merge_weather_files(input_dir='data/5y', output_dir='data/data_w', output_file='merged_weather_data.csv'):
     """
-    合并data目录下的所有CSV文件
+    合并5y目录下的所有CSV文件
     
     参数:
     input_dir: 输入文件目录
+    output_dir: 输出文件目录
     output_file: 输出文件名
     """
     print("开始合并天气数据文件...")
+    
+    # 确保输出目录存在
+    os.makedirs(output_dir, exist_ok=True)
     
     # 获取目录下所有CSV文件
     csv_files = [f for f in os.listdir(input_dir) if f.endswith('.csv') and f != output_file]
@@ -27,7 +31,8 @@ def merge_weather_files(input_dir='data', output_file='merged_weather_data.csv')
     dfs = []
     for file in csv_files:
         try:
-            df = pd.read_csv(os.path.join(input_dir, file))
+            file_path = os.path.join(input_dir, file)
+            df = pd.read_csv(file_path)
             print(f"成功读取文件: {file}, 行数: {len(df)}")
             print(f"列名: {list(df.columns)}")
             dfs.append(df)
@@ -58,7 +63,7 @@ def merge_weather_files(input_dir='data', output_file='merged_weather_data.csv')
     print(f"删除重复后行数: {len(merged_df)}")
     
     # 保存合并后的文件
-    output_path = os.path.join(input_dir, output_file)
+    output_path = os.path.join(output_dir, output_file)
     merged_df.to_csv(output_path, index=False)
     
     print(f"\n合并完成！")
@@ -71,4 +76,4 @@ if __name__ == '__main__':
     output_file = f'merged_weather_data_{timestamp}.csv'
     
     # 执行合并
-    merge_weather_files('data', output_file) 
+    merge_weather_files('data/5y', 'data/data_w', output_file) 

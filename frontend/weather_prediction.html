@@ -225,14 +225,14 @@
         }
 
         // 更新天气代码图例
-        function updateWeatherCodeLegend(codes, descriptions) {
+        function updateWeatherCodeLegend(uniqueWeatherCodes) {
             const container = document.getElementById('weatherCodeList');
             container.innerHTML = '';
-            codes.forEach((code, index) => {
-                const item = document.createElement('div');
-                item.className = 'weather-code-item';
-                item.textContent = `${code}: ${descriptions[index]}`;
-                container.appendChild(item);
+            uniqueWeatherCodes.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'weather-code-item';
+                div.textContent = `${item.code}: ${item.desc}`;
+                container.appendChild(div);
             });
         }
 
@@ -249,7 +249,7 @@
                 }
                 
                 document.getElementById('predictionSection').style.display = 'block';
-                updateWeatherCodeLegend(data.weather_codes, data.weather_descriptions);
+                updateWeatherCodeLegend(data.unique_weather_codes);
                 renderPredictionCharts(data);
             } catch (error) {
                 showError('预测服务启动失败: ' + error.message);

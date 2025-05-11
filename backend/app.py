@@ -215,6 +215,14 @@ def predict():
             print(f"警告：生成天气描述时出错: {str(e)}")
             weather_descriptions = ["未知天气" for _ in weather_codes]
 
+        # 生成唯一天气代码及说明
+        unique_codes = list(set(weather_codes))
+        unique_codes.sort()
+        unique_weather_codes = [
+            {"code": int(code), "desc": weather_processor.get_weather_description(code)}
+            for code in unique_codes
+        ]
+
         # 返回预测结果
         response_data = {
             'times': times,
@@ -222,7 +230,8 @@ def predict():
             'weather_descriptions': weather_descriptions,
             'temperatures': temperatures.tolist() if hasattr(temperatures, 'tolist') else list(temperatures),
             'humidities': humidities.tolist() if hasattr(humidities, 'tolist') else list(humidities),
-            'precipitations': precipitations.tolist() if hasattr(precipitations, 'tolist') else list(precipitations)
+            'precipitations': precipitations.tolist() if hasattr(precipitations, 'tolist') else list(precipitations),
+            'unique_weather_codes': unique_weather_codes
         }
         print("\n=== 预测完成 ===")
         return jsonify(response_data)
@@ -271,7 +280,8 @@ def get_analysis_data():
             },
             'weatherDistribution': {
                 'categories': [WEATHER_CODES.get(code, f'未知({code})') for code in df['weathercode (wmo code)'].unique()],
-                'values': df['weathercode (wmo code)'].value_counts().tolist()
+                'values': df['weathercode (wmo code)'].value_counts().tolist(),
+                'codes': df['weathercode (wmo code)'].unique().tolist()
             },
             'cloudCoverDistribution': {
                 'bins': np.histogram(df['cloudcover (%)'], bins=50)[1].tolist()[:-1],

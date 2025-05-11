@@ -110,7 +110,7 @@ def make_predictions(duration=72, data_file=None):
 def main():
     """主函数"""
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    data_path = os.path.join(current_dir, '..', 'data', 'data_w', '10day.csv')
+    data_path = os.path.join(current_dir, '..', 'data', 'data_w', '1m.csv')
     
     if not os.path.exists(data_path):
         print(f"错误：找不到数据文件 {data_path}")

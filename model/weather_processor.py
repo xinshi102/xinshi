@@ -31,12 +31,12 @@ class WeatherDataProcessor:
         # 更新天气代码映射
         self.weather_codes = [0, 1, 2, 3, 51, 53, 55, 61, 63, 65]
         self.rain_thresholds = [
-            (10.0, 65),   # 大雨
-            (2.5, 63),    # 中雨
-            (0.5, 61),    # 小雨
-            (0.1, 55),    # 重度毛毛雨
-            (0.05, 53),   # 中度毛毛雨
-            (0.01, 51),   # 轻度毛毛雨
+            (5.0, 65),    # 大雨 (>5mm)
+            (2.0, 63),    # 中雨 (2-5mm)
+            (0.5, 61),    # 小雨 (0.5-2mm)
+            (0.2, 55),    # 重度毛毛雨 (0.2-0.5mm)
+            (0.1, 53),    # 中度毛毛雨 (0.1-0.2mm)
+            (0.01, 51),   # 轻度毛毛雨 (0.01-0.1mm)
             (0.0, 3),     # 阴天
             (0.0, 2),     # 阴天
             (0.0, 1),     # 晴天/多云
@@ -46,9 +46,9 @@ class WeatherDataProcessor:
         # 添加天气代码描述映射
         self.weather_code_desc = {
             0: "晴天",
-            1: "多云",
-            2: "阴天",
-            3: "阴天多云",
+            1: "较为晴朗",
+            2: "局部多云",
+            3: "阴天",
             51: "轻度毛毛雨",
             53: "中度毛毛雨",
             55: "重度毛毛雨",
@@ -71,19 +71,8 @@ class WeatherDataProcessor:
         # 对降水量进行对数变换
         df['rain (mm)'] = np.log1p(df['rain (mm)'])
         
-        # 根据降雨量调整天气代码
-        def adjust_weather_code(row):
-            rain = row['rain (mm)']
-            current_code = row['weathercode (wmo code)']
-            
-            # 如果降雨量超过阈值，强制设置为对应的天气代码
-            for threshold, code in reversed(self.rain_thresholds):
-                if rain >= threshold:
-                    return code
-            return current_code
-        
         # 应用天气代码调整
-        df['weathercode (wmo code)'] = df.apply(adjust_weather_code, axis=1)
+        df['weathercode (wmo code)'] = df.apply(self.adjust_weather_code, axis=1)
         
         # 批量创建滞后特征
         lag_features = []

@@ -18,18 +18,66 @@ sys.stdout.reconfigure(encoding='utf-8')
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
 plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
 
-def adjust_task_weights(losses, current_weights, min_weight=0.1, max_weight=0.35):
-    """调整任务权重，添加权重上下限"""
-    # 计算相对损失
-    relative_losses = [loss / (current_weights[i] + 1e-8) for i, loss in enumerate(losses)]
-    total_relative_loss = sum(relative_losses)
+def adjust_task_weights(task_losses, current_weights, prev_losses=None):
+    """安全地调整任务权重，考虑损失变化趋势"""
+    # 计算每个任务的损失比例
+    total_loss = sum(task_losses.values())
+    if total_loss <= 0:
+        return current_weights.copy()
+        
+    loss_ratios = {task: loss / total_loss for task, loss in task_losses.items()}
+    new_weights = current_weights.copy()
     
-    # 计算新的权重，确保在上下限之间
-    new_weights = [max(min_weight, min(max_weight, loss / total_relative_loss)) for loss in relative_losses]
+    # 限制每次调整的最大幅度
+    max_adjustment = 0.02  # 降低到2%，使调整更平缓
+    
+    if prev_losses is not None:
+        # 计算损失变化趋势
+        loss_changes = {
+            task: (task_losses[task] - prev_losses[task]) / (prev_losses[task] + 1e-8)
+            for task in task_losses
+        }
+        
+        # 根据损失变化趋势调整权重
+        for task in new_weights:
+            target_weight = loss_ratios[task]
+            current_weight = current_weights[task]
+            
+            # 如果损失增加，降低该任务的权重
+            if loss_changes[task] > 0.05:  # 损失增加超过5%
+                adjustment = min(max_adjustment, current_weight * 0.1)  # 最多降低当前权重的10%
+                new_weights[task] = current_weight - adjustment
+            # 如果损失减少，适当增加权重
+            elif loss_changes[task] < -0.05:  # 损失减少超过5%
+                adjustment = min(max_adjustment, abs(target_weight - current_weight))
+                new_weights[task] = current_weight + adjustment
+            # 损失变化不大，微调
+            else:
+                adjustment = min(max_adjustment * 0.5, abs(target_weight - current_weight))
+                if target_weight > current_weight:
+                    new_weights[task] = current_weight + adjustment
+                else:
+                    new_weights[task] = current_weight - adjustment
+    else:
+        # 首次调整，使用较小的调整幅度
+        for task in new_weights:
+            target_weight = loss_ratios[task]
+            current_weight = current_weights[task]
+            adjustment = min(max_adjustment * 0.5, abs(target_weight - current_weight))
+            if target_weight > current_weight:
+                new_weights[task] = current_weight + adjustment
+            else:
+                new_weights[task] = current_weight - adjustment
+    
+    # 确保权重在合理范围内
+    for task in new_weights:
+        new_weights[task] = max(0.15, min(0.35, new_weights[task]))
     
     # 归一化权重
-    weight_sum = sum(new_weights)
-    new_weights = [w / weight_sum for w in new_weights]
+    weight_sum = sum(new_weights.values())
+    if weight_sum > 0:
+        for task in new_weights:
+            new_weights[task] = new_weights[task] / weight_sum
     
     return new_weights
 
@@ -51,19 +99,19 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
     patience_counter = 0
     best_model_state = None
     
-    # 初始任务权重
+    # 设置更合理的初始权重
     task_weights = {
-        'weather':0.15,
-        'temp': 0.2,
-        'humidity': 0.2,
-        'precip': 0.25,
-        'weather_precip_correlation': 0.2
+        'weather': 0.25,  # 略微提高初始权重
+        'temp': 0.20,
+        'humidity': 0.20,
+        'precip': 0.20,
+        'weather_precip_correlation': 0.15
     }
     
-    # 权重调整参数
-    weight_clip_min = 0.1
-    weight_clip_max = 10.0
-    weight_adjust_rate = 0.1
+    # 保存最近几个epoch的损失
+    recent_losses = {task: [] for task in task_weights}
+    loss_window_size = 7  # 保存最近7个epoch的损失
+    prev_epoch_losses = None  # 用于记录上一个epoch的损失
     
     # 获取天气代码列表
     processor = WeatherDataProcessor()
@@ -89,38 +137,6 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
             if low <= precip_value < high:
                 return weight
         return 1.0
-    
-    def adjust_task_weights(task_losses, current_weights):
-        """安全地调整任务权重"""
-        # 计算每个任务的损失比例
-        total_loss = sum(task_losses.values())
-        if total_loss <= 0:
-            return current_weights.copy()
-            
-        loss_ratios = {task: loss / total_loss for task, loss in task_losses.items()}
-        new_weights = current_weights.copy()
-        
-        # 根据损失比例和当前权重的差异来调整
-        for task in new_weights:
-            # 计算目标权重（基于损失比例）
-            target_weight = loss_ratios[task]
-            
-            # 如果当前权重与目标权重差异较大，则进行调整
-            if abs(current_weights[task] - target_weight) > 0.05:  # 差异阈值
-                # 缓慢向目标权重移动
-                new_weights[task] = current_weights[task] + (target_weight - current_weights[task]) * 0.1
-        
-        # 确保权重在合理范围内
-        for task in new_weights:
-            new_weights[task] = max(0.15, min(0.35, new_weights[task]))
-        
-        # 归一化权重
-        weight_sum = sum(new_weights.values())
-        if weight_sum > 0:
-            for task in new_weights:
-                new_weights[task] = new_weights[task] / weight_sum
-        
-        return new_weights
     
     for epoch in range(num_epochs):
         model.train()
@@ -225,10 +241,16 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
         # 计算平均损失
         for task in task_losses:
             task_losses[task] /= batch_count
+            recent_losses[task].append(task_losses[task])
+            if len(recent_losses[task]) > loss_window_size:
+                recent_losses[task].pop(0)
         
-        # 安全地调整任务权重
-        if epoch > 0 and epoch % 5 == 0:
-            task_weights = adjust_task_weights(task_losses, task_weights)
+        # 安全地调整任务权重，使用最近几个epoch的平均损失
+        if epoch > 0 and epoch % 10 == 0:  # 降低调整频率
+            # 计算最近几个epoch的平均损失
+            avg_recent_losses = {task: np.mean(losses) for task, losses in recent_losses.items()}
+            task_weights = adjust_task_weights(avg_recent_losses, task_weights, prev_epoch_losses)
+            prev_epoch_losses = avg_recent_losses.copy()  # 保存当前epoch的损失用于下次比较
         
         avg_loss = total_loss / batch_count
         train_losses.append(avg_loss)
@@ -341,7 +363,7 @@ def main():
     # 设置随机种子
     torch.manual_seed(42)
     current_dir = os.path.dirname(os.path.abspath(__file__))#获取当前文件所在目录的绝对路径
-    data_path = os.path.join(current_dir, '..', 'data', 'data_w', '5y.csv')  #构建数据文件的绝对路径
+    data_path = os.path.join(current_dir, '..', 'data', 'data_w', '1y.csv')  #构建数据文件的绝对路径
     print(f"\n正在加载数据文件: {data_path}")
     data = pd.read_csv(data_path, parse_dates=['time'], index_col='time')
     print(f"原始数据形状: {data.shape}")

@@ -110,7 +110,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
     
     # 保存最近几个epoch的损失
     recent_losses = {task: [] for task in task_weights}
-    loss_window_size = 7  # 保存最近7个epoch的损失
+    loss_window_size = 3  # 保存最近7个epoch的损失
     prev_epoch_losses = None  # 用于记录上一个epoch的损失
     
     # 获取天气代码列表
@@ -132,11 +132,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
     ]
     
     def get_precip_weight(precip_value):
-        """根据降水量获取权重"""
-        for low, high, weight in precip_ranges:
-            if low <= precip_value < high:
-                return weight
-        return 1.0
+        return 3.0 if precip_value > 0 else 1.0
     
     for epoch in range(num_epochs):
         model.train()
@@ -153,6 +149,10 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
         for batch_idx, (inputs, targets) in enumerate(train_loader):
             inputs = inputs.to(device)
             targets = targets.to(device)
+            
+            # 打印批次信息
+            if batch_idx == 0:
+                print(f"训练批次 {batch_idx} 形状: 输入={inputs.shape}, 目标={targets.shape}")
             
             optimizer.zero_grad()
             
@@ -171,17 +171,17 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
                                       weather_target.view(-1))
             
             # 2. 温度损失（添加范围约束）
-            temp_loss = criterion[1](temp_pred.squeeze(), temp_target) * 0.1  # 缩放温度损失
-            temp_range_penalty = torch.mean(F.relu(temp_pred - 40.0) + F.relu(-20.0 - temp_pred)) * 0.01
+            temp_loss = criterion[1](temp_pred.squeeze(), temp_target)  # 移除0.1缩放
+            temp_range_penalty = torch.mean(F.relu(temp_pred - 40.0) + F.relu(-20.0 - temp_pred)) * 0.1  # 改为0.1
             
             # 3. 湿度损失（添加范围约束）
-            humidity_loss = criterion[1](humidity_pred.squeeze(), humidity_target) * 0.1  # 缩放湿度损失
-            humidity_range_penalty = torch.mean(F.relu(humidity_pred - 100.0) + F.relu(-humidity_pred)) * 0.01
+            humidity_loss = criterion[1](humidity_pred.squeeze(), humidity_target)  # 移除0.1缩放
+            humidity_range_penalty = torch.mean(F.relu(humidity_pred - 100.0) + F.relu(-humidity_pred)) * 0.1  # 改为0.1
             
             # 4. 降水损失（带权重）
             precip_weights = torch.tensor([get_precip_weight(p.item()) for p in precip_target.view(-1)],
                                         device=device)
-            precip_loss = criterion[1](precip_pred.squeeze(), precip_target) * precip_weights.mean() * 0.1  # 缩放降水损失
+            precip_loss = criterion[1](precip_pred.squeeze(), precip_target) * precip_weights.mean()  # 移除0.1缩放
             
             # 5. 天气和降水量的关联性损失
             weather_probs = F.softmax(weather_pred, dim=-1)
@@ -204,7 +204,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
             )
             
             expected_rain_probs = expected_probs.view(batch_size, seq_len)
-            correlation_loss = F.mse_loss(rain_probs, expected_rain_probs) * 0.1  # 缩放相关性损失
+            correlation_loss = F.mse_loss(rain_probs, expected_rain_probs)  # 移除0.1缩放
             
             # 更新任务损失统计
             task_losses['weather'] += weather_loss.item()
@@ -246,7 +246,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
                 recent_losses[task].pop(0)
         
         # 安全地调整任务权重，使用最近几个epoch的平均损失
-        if epoch > 0 and epoch % 10 == 0:  # 降低调整频率
+        if epoch > 0 and epoch % 3 == 0:  # 降低调整频率
             # 计算最近几个epoch的平均损失
             avg_recent_losses = {task: np.mean(losses) for task, losses in recent_losses.items()}
             task_weights = adjust_task_weights(avg_recent_losses, task_weights, prev_epoch_losses)
@@ -268,7 +268,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
         val_batch_count = 0
         
         with torch.no_grad():
-            for inputs, targets in val_loader:
+            for batch_idx, (inputs, targets) in enumerate(val_loader):
                 inputs = inputs.to(device)
                 targets = targets.to(device)
                 
@@ -282,12 +282,17 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
                 # 计算验证集损失
                 weather_loss = criterion[0](weather_pred.view(-1, weather_pred.size(-1)), 
                                           weather_target.view(-1))
-                temp_loss = criterion[1](temp_pred.squeeze(), temp_target) * 0.1  # 缩放温度损失
-                humidity_loss = criterion[1](humidity_pred.squeeze(), humidity_target) * 0.1  # 缩放湿度损失
+                temp_loss = criterion[1](temp_pred.squeeze(), temp_target) 
+                humidity_loss = criterion[1](humidity_pred.squeeze(), humidity_target) 
+                
+                # 确保维度匹配
+                precip_pred = precip_pred.squeeze()
+                if precip_pred.size(0) != precip_target.size(0):
+                    precip_pred = precip_pred[:precip_target.size(0)]
                 
                 precip_weights = torch.tensor([get_precip_weight(p.item()) for p in precip_target.view(-1)],
                                             device=device)
-                precip_loss = criterion[1](precip_pred.squeeze(), precip_target) * precip_weights.mean() * 0.1  # 缩放降水损失
+                precip_loss = criterion[1](precip_pred, precip_target) * precip_weights.mean() 
                 
                 # 计算天气和降水量的关联性损失
                 weather_probs = F.softmax(weather_pred, dim=-1)
@@ -309,11 +314,11 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
                 )
                 
                 expected_rain_probs = expected_probs.view(batch_size, seq_len)
-                correlation_loss = F.mse_loss(rain_probs, expected_rain_probs) * 0.1  # 缩放相关性损失
+                correlation_loss = F.mse_loss(rain_probs, expected_rain_probs)  # 移除0.1缩放
                 
                 # 添加范围约束惩罚
-                temp_range_penalty = torch.mean(F.relu(temp_pred - 40.0) + F.relu(-20.0 - temp_pred)) * 0.01
-                humidity_range_penalty = torch.mean(F.relu(humidity_pred - 100.0) + F.relu(-humidity_pred)) * 0.01
+                temp_range_penalty = torch.mean(F.relu(temp_pred - 40.0) + F.relu(-20.0 - temp_pred)) * 0.1  # 改为0.1
+                humidity_range_penalty = torch.mean(F.relu(humidity_pred - 100.0) + F.relu(-humidity_pred)) * 0.1  # 改为0.1
                 
                 loss = (weather_loss * task_weights['weather'] +
                        temp_loss * task_weights['temp'] +
@@ -363,91 +368,60 @@ def main():
     # 设置随机种子
     torch.manual_seed(42)
     current_dir = os.path.dirname(os.path.abspath(__file__))#获取当前文件所在目录的绝对路径
-    data_path = os.path.join(current_dir, '..', 'data', 'data_w', '1y.csv')  #构建数据文件的绝对路径
+    data_path = os.path.join(current_dir, '..', 'data', 'data_w', '2y.csv')  #构建数据文件的绝对路径
     print(f"\n正在加载数据文件: {data_path}")
     data = pd.read_csv(data_path, parse_dates=['time'], index_col='time')
-    print(f"原始数据形状: {data.shape}")
-    print(f"数据列名: {data.columns.tolist()}")
-    
     # 数据预处理
     print("\n开始数据预处理...")
     processor = WeatherDataProcessor()
     print("正在拟合处理器...")
     processed_data = processor.fit(data)  # 在训练数据上拟合编码器和标准化器
-    print(f"拟合后的数据形状: {processed_data.shape}")
     print("正在预处理数据...")
-    processed_data = processor.preprocess_data(data)
-    print(f"预处理后的数据形状: {processed_data.shape}")
-    
-    # 打印数据形状信息
-    print("\n数据预处理后的形状信息：")
-    print(f"原始数据形状: {data.shape}")
-    print(f"处理后的数据形状: {processed_data.shape}")
-    print(f"特征列数: {len(processed_data.columns)}")
-    print("\n特征列名：")
-    for col in processed_data.columns:
-        print(f"- {col}")
-    
+    processed_data = processor.preprocess_data(data)  
     # 创建序列
     print("\n正在创建序列...")
     sequences, targets = processor.create_sequences(processed_data, input_days=7, output_days=3)
-    
-    # 打印序列形状信息
-    print("\n序列形状信息：")
-    print(f"输入序列形状: {sequences.shape}")
-    print(f"目标序列形状: {targets.shape}")
     
     # 划分训练集和验证集
     train_size = int(0.8 * len(sequences))
     X_train, X_val = sequences[:train_size], sequences[train_size:]
     y_train, y_val = targets[:train_size], targets[train_size:]
-    
-    print(f"\n训练集大小: {len(X_train)}")
-    print(f"验证集大小: {len(X_val)}")
-    
+     
     # 创建数据加载器
     train_dataset = TensorDataset(torch.FloatTensor(X_train), torch.FloatTensor(y_train))
     val_dataset = TensorDataset(torch.FloatTensor(X_val), torch.FloatTensor(y_val))
     
-    batch_size = 32
+    batch_size = 64
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size)
-    
+    val_loader = DataLoader(val_dataset, batch_size=batch_size)   
     # 设置设备
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"\n使用设备: {device}")
-    
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') #使用cpu
     # 模型参数
     input_size = 36  # 特征维度
-    hidden_size = 96
-    num_layers = 1
+    hidden_size = 128
+    num_layers = 2  # 从1改为2
     output_size = 72  # 3天 * 24小时
     weather_categories = 10  # 更新天气类别数量为10种
-    
+   
     # 初始化模型
-    model = WeatherLSTM(input_size, hidden_size, num_layers, output_size, weather_categories).to(device)
-    
+    model = WeatherLSTM(input_size, hidden_size, num_layers, output_size, weather_categories).to(device)    
     # 定义损失函数
     criterion = [
         nn.CrossEntropyLoss(),  # 天气分类损失
         nn.MSELoss()  # 回归任务损失
-    ]
-    
-    # 定义优化器，使用固定学习率0.0001
-    optimizer = optim.Adam(model.parameters(), lr=0.0001)
-    
+    ]  
+    # 定义优化器，使用固定学习率0.001
+    optimizer = optim.Adam(model.parameters(), lr=0.001) 
     # 训练模型
     num_epochs = 100
     print("\n开始训练模型...")
     train_losses, val_losses = train_model(
         model, train_loader, val_loader, criterion, optimizer, num_epochs, device
-    )
-    
+    ) 
     # 保存模型
     model_path = os.path.join(current_dir, '..', 'data', 'weather_lstm_model.pth')
     torch.save(model.state_dict(), model_path)
-    print(f"\n模型已保存到: {model_path}")
-    
+    print(f"\n模型已保存到: {model_path}")   
     # 保存处理器
     processor_path = os.path.join(current_dir, '..', 'data', 'weather_processor.pkl')
     with open(processor_path, 'wb') as f:

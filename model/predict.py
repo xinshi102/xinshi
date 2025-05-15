@@ -15,7 +15,7 @@ plt.rcParams['axes.unicode_minus'] = False
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-def load_model_and_processor(model_path, processor_path, input_size=36, hidden_size=96, num_layers=1, output_size=72):
+def load_model_and_processor(model_path, processor_path, input_size=36, hidden_size=128, num_layers=2, output_size=72):
     """加载模型和处理器"""
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     

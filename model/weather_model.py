@@ -31,6 +31,14 @@ class WeatherLSTM(nn.Module):
             nn.LayerNorm(hidden_size // 2)
         )
         
+        # 云量特征提取层
+        self.cloud_features = nn.Sequential(
+            nn.Linear(hidden_size // 2, hidden_size // 4),
+            nn.ReLU(),
+            nn.LayerNorm(hidden_size // 4),
+            nn.Dropout(0.2)
+        )
+        
         # 天气代码分类器 - 使用注意力机制
         self.weather_attention = nn.Sequential(
             nn.Linear(hidden_size // 2, hidden_size // 4),
@@ -38,39 +46,49 @@ class WeatherLSTM(nn.Module):
             nn.Linear(hidden_size // 4, 1)
         )
         
-        self.weather_classifier = nn.Sequential(
-            nn.Linear(hidden_size // 2, hidden_size // 4),
-            nn.ReLU(),
-            nn.LayerNorm(hidden_size // 4),
-            nn.Linear(hidden_size // 4, weather_categories)
+        # 云量注意力机制
+        self.cloud_attention = nn.Sequential(
+            nn.Linear(hidden_size // 4, hidden_size // 8),
+            nn.Tanh(),
+            nn.Linear(hidden_size // 8, 1)
         )
         
-        # 温度回归器 - 添加Sigmoid激活函数
+        # 天气分类器 - 结合云量特征
+        self.weather_classifier = nn.Sequential(
+            nn.Linear(hidden_size // 2 + hidden_size // 4 + hidden_size // 2 + hidden_size // 4, hidden_size // 2),
+            nn.ReLU(),
+            nn.LayerNorm(hidden_size // 2),
+            nn.Dropout(0.2),
+            nn.Linear(hidden_size // 2, weather_categories)
+        )
+        
+        # 温度回归器
         self.temp_regressor = nn.Sequential(
             nn.Linear(hidden_size // 2, hidden_size // 4),
             nn.ReLU(),
-            nn.Linear(hidden_size // 4, 1),
-            nn.Sigmoid()  # 将输出限制在0-1之间
+            nn.LayerNorm(hidden_size // 4),
+            nn.Linear(hidden_size // 4, 1)
         )
         
-        # 湿度回归器 - 添加Sigmoid激活函数
+        # 湿度回归器
         self.humidity_regressor = nn.Sequential(
             nn.Linear(hidden_size // 2, hidden_size // 4),
             nn.ReLU(),
+            nn.LayerNorm(hidden_size // 4),
             nn.Linear(hidden_size // 4, 1),
-            nn.Sigmoid()  # 将输出限制在0-1之间
+            nn.ReLU()
         )
         
         # 改进的降水预测系统
         self.precip_attention = nn.Sequential(
-            nn.Linear(hidden_size // 2, hidden_size // 4),
+            nn.Linear(hidden_size // 2 + hidden_size // 4, hidden_size // 4),
             nn.Tanh(),
             nn.Linear(hidden_size // 4, 1)
         )
         
-        # 改进的降水量预测网络
+        # 改进的降水量预测网络 - 结合云量特征
         self.precip_base = nn.Sequential(
-            nn.Linear(hidden_size // 2, hidden_size // 4),
+            nn.Linear(hidden_size // 2 + hidden_size // 4, hidden_size // 4),
             nn.ReLU(),
             nn.LayerNorm(hidden_size // 4),
             nn.Dropout(0.2),
@@ -78,34 +96,7 @@ class WeatherLSTM(nn.Module):
             nn.ReLU(),
             nn.LayerNorm(hidden_size // 8),
             nn.Linear(hidden_size // 8, 1),
-            nn.ReLU()  # 确保降水量非负
-        )
-        
-        # 添加降水量分类器（10种天气类型）
-        self.precip_classifier = nn.Sequential(
-            nn.Linear(hidden_size // 2, hidden_size // 4),
-            nn.ReLU(),
-            nn.LayerNorm(hidden_size // 4),
-            nn.Linear(hidden_size // 4, 10)  # 10种天气类型
-        )
-        
-        # 降水量到天气代码的转换层
-        self.precip_to_weather = nn.Sequential(
-            nn.Linear(1, hidden_size // 4),
-            nn.ReLU(),
-            nn.LayerNorm(hidden_size // 4),
-            nn.Dropout(0.2),
-            nn.Linear(hidden_size // 4, hidden_size // 8),
-            nn.ReLU(),
-            nn.Linear(hidden_size // 8, weather_categories)
-        )
-        
-        # 天气代码融合层
-        self.weather_fusion = nn.Sequential(
-            nn.Linear(weather_categories * 2, hidden_size // 4),
-            nn.ReLU(),
-            nn.LayerNorm(hidden_size // 4),
-            nn.Linear(hidden_size // 4, weather_categories)
+            nn.ReLU()
         )
         
         # 温度范围参数
@@ -118,12 +109,12 @@ class WeatherLSTM(nn.Module):
             0.0,    # 1: 较为晴朗
             0.0,    # 2: 局部多云
             0.0,    # 3: 阴天
-            0.05,   # 51: 轻度毛毛雨 (0.01-0.1mm)
-            0.15,   # 53: 中度毛毛雨 (0.1-0.2mm)
-            0.35,   # 55: 重度毛毛雨 (0.2-0.5mm)
-            1.25,   # 61: 小雨 (0.5-2mm)
-            3.5,    # 63: 中雨 (2-5mm)
-            7.5     # 65: 大雨 (>5mm)
+            0.01,   # 51: 轻度毛毛雨 (0.01-0.1mm)
+            0.1,    # 53: 中度毛毛雨 (0.1-0.2mm)
+            0.2,    # 55: 重度毛毛雨 (0.2-0.5mm)
+            0.5,    # 61: 小雨 (0.5-2mm)
+            2.0,    # 63: 中雨 (2-5mm)
+            5.0     # 65: 大雨 (>5mm)
         ])
     
     def forward(self, x):
@@ -143,72 +134,55 @@ class WeatherLSTM(nn.Module):
         # 提取共享特征
         shared_features = self.shared_features(lstm_out)
         
+        # 提取云量特征
+        cloud_features = self.cloud_features(shared_features)
+        
+        # 计算云量注意力权重
+        cloud_attention = self.cloud_attention(cloud_features)
+        cloud_attention = F.softmax(cloud_attention, dim=1)
+        cloud_features = cloud_features * cloud_attention
+        
         # 计算天气注意力权重
-        attention_weights = self.weather_attention(shared_features)
-        attention_weights = F.softmax(attention_weights, dim=1)
+        weather_attention = self.weather_attention(shared_features)
+        weather_attention = F.softmax(weather_attention, dim=1)
+        attended_features = shared_features * weather_attention
         
-        # 应用注意力机制
-        attended_features = shared_features * attention_weights
-        
-        # 基础天气代码预测
-        base_weather_pred = self.weather_classifier(attended_features)
-        
-        # 基础预测
-        temp_pred = self.temp_regressor(shared_features)
-        # 将温度映射到实际范围
-        temp_pred = temp_pred * (self.temp_max - self.temp_min) + self.temp_min
-        
-        humidity_pred = self.humidity_regressor(shared_features)
-        # 将湿度映射到0-100%
-        humidity_pred = humidity_pred * 100.0
-        
-        # 计算降水量注意力权重
-        precip_attention = self.precip_attention(shared_features)
+        # 合并特征用于降水预测
+        precip_input = torch.cat([shared_features, cloud_features], dim=-1)
+        # 计算降水注意力权重
+        precip_attention = self.precip_attention(precip_input)
         precip_attention = F.softmax(precip_attention, dim=1)
-        
-        # 应用降水量注意力机制
-        precip_features = shared_features * precip_attention
-        
+        precip_features = precip_input * precip_attention
         # 预测降水量
         precip_pred = self.precip_base(precip_features)
         
-        # 预测降水量类别
-        precip_class = self.precip_classifier(precip_features)
+        # 合并特征用于天气分类（加入降水特征，实现特征交互）
+        weather_input = torch.cat([attended_features, cloud_features, precip_features], dim=-1)
+        weather_pred = self.weather_classifier(weather_input)
         
-        # 根据类别调整降水量预测
-        precip_class_probs = F.softmax(precip_class, dim=-1)
+        # 温度预测
+        temp_pred = self.temp_regressor(shared_features)
+        temp_pred = torch.clamp(temp_pred, min=-20.0, max=40.0)  # 直接限制温度范围
         
-        # 将precip_adjustments移动到正确的设备上
-        precip_adjustments = self.precip_adjustments.to(precip_pred.device)
+        # 湿度预测
+        humidity_pred = self.humidity_regressor(shared_features)
+        humidity_pred = torch.clamp(humidity_pred, min=0.0, max=100.0)  # 限制湿度范围
         
-        # 使用类别概率加权计算降水量调整值
-        precip_adjustment = torch.sum(precip_class_probs * precip_adjustments.view(1, 1, -1), dim=-1, keepdim=True)
-        
-        # 最终降水量预测
-        precip_pred = precip_pred + precip_adjustment
-        
-        # 从降水量预测天气代码
-        precip_weather_pred = self.precip_to_weather(precip_pred)
-        
-        # 融合天气代码预测
-        weather_inputs = torch.cat([base_weather_pred, precip_weather_pred], dim=-1)
-        weather_pred = self.weather_fusion(weather_inputs)
-        
-        return weather_pred, temp_pred, humidity_pred, precip_pred 
+        return weather_pred, temp_pred, humidity_pred, precip_pred
 
 def calculate_loss(outputs, targets):
     # 定义天气类型的层次关系矩阵（10x10）
     weather_hierarchy = torch.tensor([
-        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],  # 0: 晴天
-        [1, 0, 1, 2, 3, 4, 5, 6, 7, 8],  # 1: 较为晴朗
-        [2, 1, 0, 1, 2, 3, 4, 5, 6, 7],  # 2: 局部多云
-        [3, 2, 1, 0, 1, 2, 3, 4, 5, 6],  # 3: 阴天
-        [4, 3, 2, 1, 0, 1, 2, 3, 4, 5],  # 51: 毛毛雨(轻)
-        [5, 4, 3, 2, 1, 0, 1, 2, 3, 4],  # 53: 毛毛雨(中)
-        [6, 5, 4, 3, 2, 1, 0, 1, 2, 3],  # 55: 毛毛雨(重)
-        [7, 6, 5, 4, 3, 2, 1, 0, 1, 2],  # 61: 雨(轻)
-        [8, 7, 6, 5, 4, 3, 2, 1, 0, 1],  # 63: 雨(中)
-        [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]   # 65: 雨(重)
+        [0,   0.1, 0.1, 0.1, 1,   1.1, 1.2, 2,   2.1, 2.2],   # 晴天
+        [0.1, 0,   0.1, 0.1, 1,   1.1, 1.2, 2,   2.1, 2.2],   # 较为晴朗
+        [0.1, 0.1, 0,   0.1, 1,   1.1, 1.2, 2,   2.1, 2.2],   # 局部多云
+        [0.1, 0.1, 0.1, 0,   1,   1.1, 1.2, 2,   2.1, 2.2],   # 阴天
+        [1,   1,   1,   1,   0,   0.1, 0.2, 1,   1.1, 1.2],   # 毛毛雨(轻)
+        [1.1, 1.1, 1.1, 1.1, 0.1, 0,   0.1, 1,   1.1, 1.2],   # 毛毛雨(中)
+        [1.2, 1.2, 1.2, 1.2, 0.2, 0.1, 0,   1,   1.1, 1.2],   # 毛毛雨(重)
+        [2,   2,   2,   2,   1,   1,   1,   0,   0.1, 0.2],   # 小雨
+        [2.1, 2.1, 2.1, 2.1, 1.1, 1.1, 1.1, 0.1, 0,   0.1],   # 中雨
+        [2.3, 2.2, 2.1, 2.0, 1.2, 1.1, 1.0, 0.2, 0.1, 0]      # 大雨
     ], device=outputs[0].device)
     
     # 基础交叉熵损失

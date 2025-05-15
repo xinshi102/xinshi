@@ -9,6 +9,7 @@ import traceback
 import torch
 import json
 import math
+import shutil
 
 # 添加项目根目录到Python路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -31,10 +32,12 @@ CORS(app, resources={
     }
 })
 
-# 确保上传目录存在
+# 确保上传目录和旧文件目录存在
 UPLOAD_FOLDER = os.path.join(root_dir, 'uploads')
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+OLD_FILES_FOLDER = os.path.join(root_dir, 'old_files')
+for folder in [UPLOAD_FOLDER, OLD_FILES_FOLDER]:
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 
 # 初始化天气处理器以获取天气代码描述
 try:
@@ -49,14 +52,31 @@ WEATHER_CODES = {
     0: "晴天",
     1: "多云",
     2: "阴天",
-    3: "小雨",
-    4: "中雨",
-    5: "大雨",
-    6: "暴雨",
-    7: "小雪",
-    8: "中雪",
-    9: "大雪"
+    3: "阴天多云",
+    51: "小毛毛雨",
+    53: "中毛毛雨",
+    55: "大毛毛雨",
+    61: "小雨",
+    63: "中雨",
+    65: "大雨"
 }
+
+def move_old_files():
+    """将旧文件移动到old_files目录"""
+    try:
+        # 获取当前时间戳
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        # 移动uploads目录中的所有文件到old_files目录
+        for filename in os.listdir(UPLOAD_FOLDER):
+            if filename.endswith('.csv'):
+                old_path = os.path.join(UPLOAD_FOLDER, filename)
+                new_filename = f"{timestamp}_{filename}"
+                new_path = os.path.join(OLD_FILES_FOLDER, new_filename)
+                shutil.move(old_path, new_path)
+                print(f"已移动文件: {filename} -> {new_filename}")
+    except Exception as e:
+        print(f"移动旧文件时出错: {str(e)}")
 
 def replace_nan(obj):
     if isinstance(obj, float) and math.isnan(obj):
@@ -65,6 +85,17 @@ def replace_nan(obj):
         return [replace_nan(x) for x in obj]
     elif isinstance(obj, dict):
         return {k: replace_nan(v) for k, v in obj.items()}
+    else:
+        return obj
+
+def to_python_type(obj):
+    """递归将numpy类型转换为Python原生类型"""
+    if isinstance(obj, dict):
+        return {k: to_python_type(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [to_python_type(x) for x in obj]
+    elif isinstance(obj, np.generic):
+        return obj.item()
     else:
         return obj
 
@@ -84,7 +115,10 @@ def upload_file():
 
         print(f"上传的文件名: {file.filename}")
 
-        # 保存上传的文件
+        # 移动旧文件
+        move_old_files()
+
+        # 保存新文件
         file_path = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(file_path)
         print(f"文件已保存到: {file_path}")
@@ -109,6 +143,8 @@ def upload_file():
         if missing_columns:
             error_msg = f"CSV文件缺少必需的列: {', '.join(missing_columns)}"
             print(f"错误：{error_msg}")
+            # 删除无效文件
+            os.remove(file_path)
             return jsonify({'error': error_msg}), 400
 
         # 返回原始数据用于显示
@@ -124,16 +160,22 @@ def upload_file():
     except pd.errors.EmptyDataError:
         error_msg = "上传的CSV文件是空的"
         print(f"错误：{error_msg}")
+        if os.path.exists(file_path):
+            os.remove(file_path)
         return jsonify({'error': error_msg}), 400
     except pd.errors.ParserError:
         error_msg = "CSV文件格式错误，请检查文件格式"
         print(f"错误：{error_msg}")
+        if os.path.exists(file_path):
+            os.remove(file_path)
         return jsonify({'error': error_msg}), 400
     except Exception as e:
         error_msg = f"处理文件时出错: {str(e)}"
         print(f"错误：{error_msg}")
         print("详细错误信息:")
         print(traceback.format_exc())
+        if os.path.exists(file_path):
+            os.remove(file_path)
         return jsonify({'error': error_msg}), 500
 
 @app.route('/api/predict', methods=['GET', 'POST'])
@@ -214,31 +256,25 @@ def predict():
         except Exception as e:
             print(f"警告：生成天气描述时出错: {str(e)}")
             weather_descriptions = ["未知天气" for _ in weather_codes]
-
-        # 生成唯一天气代码及说明
-        unique_codes = list(set(weather_codes))
-        unique_codes.sort()
-        unique_weather_codes = [
-            {"code": int(code), "desc": weather_processor.get_weather_description(code)}
-            for code in unique_codes
-        ]
-
-        # 返回预测结果
+        
+        # 准备响应数据，确保所有字段为list且不为None
         response_data = {
-            'times': times,
-            'weather_codes': weather_codes.tolist() if hasattr(weather_codes, 'tolist') else list(weather_codes),
-            'weather_descriptions': weather_descriptions,
-            'temperatures': temperatures.tolist() if hasattr(temperatures, 'tolist') else list(temperatures),
-            'humidities': humidities.tolist() if hasattr(humidities, 'tolist') else list(humidities),
-            'precipitations': precipitations.tolist() if hasattr(precipitations, 'tolist') else list(precipitations),
-            'unique_weather_codes': unique_weather_codes
+            'times': list(times) if times is not None else [],
+            'weather_codes': list(weather_codes) if weather_codes is not None else [],
+            'weather_descriptions': list(weather_descriptions) if weather_descriptions is not None else [],
+            'temperatures': list(temperatures) if temperatures is not None else [],
+            'humidities': list(humidities) if humidities is not None else [],
+            'precipitations': list(precipitations) if precipitations is not None else []
         }
-        print("\n=== 预测完成 ===")
+        # 处理NaN值
+        response_data = replace_nan(response_data)
+        # 递归转换所有numpy类型为Python原生类型
+        response_data = to_python_type(response_data)
         return jsonify(response_data)
-
+        
     except Exception as e:
-        error_msg = f"预测过程出错: {str(e)}"
-        print(f"\n错误：{error_msg}")
+        error_msg = f"预测过程中出错: {str(e)}"
+        print(f"错误：{error_msg}")
         print("详细错误信息:")
         print(traceback.format_exc())
         return jsonify({'error': error_msg}), 500
@@ -287,20 +323,34 @@ def get_analysis_data():
                 'bins': np.histogram(df['cloudcover (%)'], bins=50)[1].tolist()[:-1],
                 'counts': np.histogram(df['cloudcover (%)'], bins=50)[0].tolist()
             },
+            # 新增风速分布
             'windSpeedDistribution': {
                 'bins': np.histogram(df['windspeed_10m (m/s)'], bins=50)[1].tolist()[:-1],
                 'counts': np.histogram(df['windspeed_10m (m/s)'], bins=50)[0].tolist()
             },
+            # 新增相关性矩阵
             'correlationMatrix': {
                 'categories': ['温度', '湿度', '降水量', '气压', '云量', '风速'],
                 'values': df[['temperature_2m (°C)', 'relativehumidity_2m (%)', 'rain (mm)', 
-                            'surface_pressure (hPa)', 'cloudcover (%)', 'windspeed_10m (m/s)']].corr().values.tolist()
+                              'surface_pressure (hPa)', 'cloudcover (%)', 'windspeed_10m (m/s)']].corr().values.tolist()
+            },
+            # 新增湿度热力图数据
+            'humidityHeatmap': {
+                'times': df.index.strftime('%Y-%m-%d %H:%M').tolist(),
+                'values': df['relativehumidity_2m (%)'].tolist()
             }
         }
+        
+        # 处理NaN值
         analysis_data = replace_nan(analysis_data)
         return jsonify(analysis_data)
+        
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        error_msg = f"获取分析数据时出错: {str(e)}"
+        print(f"错误：{error_msg}")
+        print("详细错误信息:")
+        print(traceback.format_exc())
+        return jsonify({'error': error_msg}), 500
 
 @app.route('/api/current-weather', methods=['GET'])
 def get_current_weather():
@@ -320,5 +370,6 @@ if __name__ == '__main__':
     print("启动Flask服务器...")
     print("项目根目录:", root_dir)
     print("上传目录:", os.path.abspath(UPLOAD_FOLDER))
+    print("旧文件目录:", os.path.abspath(OLD_FILES_FOLDER))
     print("Python路径:", sys.path)
     app.run(debug=True, port=5000) 

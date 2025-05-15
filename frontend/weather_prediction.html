@@ -180,17 +180,25 @@
 
         // 渲染预测图表
         function renderPredictionCharts(data) {
+            // 保证所有字段为数组
+            const times = Array.isArray(data.times) ? data.times : [];
+            const weather_codes = Array.isArray(data.weather_codes) ? data.weather_codes : [];
+            const weather_descriptions = Array.isArray(data.weather_descriptions) ? data.weather_descriptions : [];
+            const temperatures = Array.isArray(data.temperatures) ? data.temperatures : [];
+            const humidities = Array.isArray(data.humidities) ? data.humidities : [];
+            const precipitations = Array.isArray(data.precipitations) ? data.precipitations : [];
+
             // 渲染天气代码图表
             window.weatherCodeChart = safeInitEcharts('weatherCodeChart');
             window.weatherCodeChart.setOption({
                 title: { text: '天气类型预测' },
                 tooltip: { trigger: 'axis', formatter: function(params) {
                     const idx = params[0].dataIndex;
-                    return `${params[0].name}<br/>天气代码: ${data.weather_codes[idx]}<br/>天气描述: ${data.weather_descriptions[idx]}`;
+                    return `${params[0].name}<br/>天气代码: ${weather_codes[idx]}<br/>天气描述: ${weather_descriptions[idx]}`;
                 } },
-                xAxis: { type: 'category', data: data.times },
-                yAxis: { name: '天气代码', type: 'category', data: [...new Set(data.weather_codes)] },
-                series: [{ name: '天气类型', type: 'line', data: data.weather_codes }]
+                xAxis: { type: 'category', data: times },
+                yAxis: { name: '天气代码', type: 'category', data: [...new Set(weather_codes)] },
+                series: [{ name: '天气类型', type: 'line', data: weather_codes }]
             });
 
             // 渲染温度图表
@@ -198,9 +206,9 @@
             window.temperatureChart.setOption({
                 title: { text: '温度预测' },
                 tooltip: { trigger: 'axis' },
-                xAxis: { type: 'category', data: data.times },
+                xAxis: { type: 'category', data: times },
                 yAxis: { name: '温度 (°C)' },
-                series: [{ name: '温度', type: 'line', data: data.temperatures }]
+                series: [{ name: '温度', type: 'line', data: temperatures }]
             });
 
             // 渲染湿度图表
@@ -208,9 +216,9 @@
             window.humidityChart.setOption({
                 title: { text: '湿度预测' },
                 tooltip: { trigger: 'axis' },
-                xAxis: { type: 'category', data: data.times },
+                xAxis: { type: 'category', data: times },
                 yAxis: { name: '湿度 (%)' },
-                series: [{ name: '湿度', type: 'line', data: data.humidities }]
+                series: [{ name: '湿度', type: 'line', data: humidities }]
             });
 
             // 渲染降水量图表
@@ -218,9 +226,9 @@
             window.precipitationChart.setOption({
                 title: { text: '降水量预测' },
                 tooltip: { trigger: 'axis' },
-                xAxis: { type: 'category', data: data.times },
+                xAxis: { type: 'category', data: times },
                 yAxis: { name: '降水量 (mm)' },
-                series: [{ name: '降水量', type: 'line', data: data.precipitations }]
+                series: [{ name: '降水量', type: 'line', data: precipitations }]
             });
         }
 
@@ -228,7 +236,7 @@
         function updateWeatherCodeLegend(uniqueWeatherCodes) {
             const container = document.getElementById('weatherCodeList');
             container.innerHTML = '';
-            uniqueWeatherCodes.forEach(item => {
+            (uniqueWeatherCodes || []).forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'weather-code-item';
                 div.textContent = `${item.code}: ${item.desc}`;

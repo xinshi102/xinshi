@@ -30,6 +30,10 @@ class WeatherDataProcessor:
         
         # 更新天气代码映射
         self.weather_codes = [0, 1, 2, 3, 51, 53, 55, 61, 63, 65]
+        # 添加天气代码到连续索引的映射
+        self.weather_code_to_index = {code: idx for idx, code in enumerate(self.weather_codes)}
+        self.index_to_weather_code = {idx: code for code, idx in self.weather_code_to_index.items()}
+        
         self.rain_thresholds = [
             (5.0, 65),    # 大雨 (>5mm)
             (2.0, 63),    # 中雨 (2-5mm)
@@ -57,6 +61,14 @@ class WeatherDataProcessor:
             65: "大雨"
         }
         
+        # 云量阈值
+        self.cloud_thresholds = [
+            (90.0, 3),    # 阴天多云 (>90%)
+            (70.0, 2),    # 阴天 (70-90%)
+            (30.0, 1),    # 多云 (30-70%)
+            (0.0, 0)      # 晴天 (0-30%)
+        ]
+        
         # 预先拟合天气编码器
         self.weather_encoder.fit(self.weather_codes)
         print("初始化完成：已预设天气编码器")
@@ -71,8 +83,8 @@ class WeatherDataProcessor:
         # 对降水量进行对数变换
         df['rain (mm)'] = np.log1p(df['rain (mm)'])
         
-        # 应用天气代码调整
-        df['weathercode (wmo code)'] = df.apply(self.adjust_weather_code, axis=1)
+        # 将天气代码转换为连续索引
+        df['weathercode (wmo code)'] = df['weathercode (wmo code)'].map(self.weather_code_to_index)
         
         # 批量创建滞后特征
         lag_features = []
@@ -118,21 +130,27 @@ class WeatherDataProcessor:
         self.is_fitted = True
         return all_features
     
-    def adjust_weather_code(self, row):
-        """根据降雨量和当前天气状况智能调整天气代码"""
+    def determine_weather_code(self, row):
+        """根据降雨量和云量确定天气代码"""
         rain = row['rain (mm)']
-        current_code = row['weathercode (wmo code)']
+        cloud = row['cloudcover (%)']
         
-        # 如果没有降雨，保持原有的晴天/多云/阴天代码
-        if rain == 0 and current_code in [0, 1, 2, 3]:
-            return current_code
-            
-        # 根据降雨量确定天气代码
-        for threshold, code in reversed(self.rain_thresholds):
-            if rain >= threshold:
-                return code
-                
-        return current_code
+        # 如果有降雨，根据降雨量确定天气代码
+        if rain > 0:
+            for threshold, code in reversed(self.rain_thresholds):
+                if rain >= threshold:
+                    return self.weather_code_to_index[code]
+        
+        # 如果没有降雨，根据云量确定天气代码
+        for threshold, code in reversed(self.cloud_thresholds):
+            if cloud >= threshold:
+                return self.weather_code_to_index[code]
+        
+        return 0  # 默认返回晴天（索引0）
+    
+    def adjust_weather_code(self, row):
+        """使用新的天气代码确定方法"""
+        return self.determine_weather_code(row)
     
     def get_weather_description(self, code):
         """获取天气代码对应的描述"""
@@ -150,9 +168,6 @@ class WeatherDataProcessor:
         
         # 对降水量进行对数变换
         df['rain (mm)'] = np.log1p(df['rain (mm)'])
-        
-        # 使用改进后的天气代码调整方法
-        df['weathercode (wmo code)'] = df.apply(self.adjust_weather_code, axis=1)
         
         # 批量创建滞后特征
         lag_features = []
@@ -185,11 +200,6 @@ class WeatherDataProcessor:
         numeric_features = [col for col in all_features.columns if col not in ['weathercode (wmo code)']]
         all_features[numeric_features] = self.scaler.transform(all_features[numeric_features])
         
-        # 编码天气代码
-        all_features['weathercode (wmo code)'] = self.weather_encoder.transform(
-            all_features['weathercode (wmo code)'].astype(int)
-        )
-        
         return all_features
     
     def create_sequences(self, df, input_days=7, output_days=3):
@@ -219,7 +229,10 @@ class WeatherDataProcessor:
         return np.array(sequences), np.array(targets)
     
     def inverse_transform_weather(self, encoded_weather):
-        return self.weather_encoder.inverse_transform(encoded_weather)
+        """将连续索引转换回原始天气代码"""
+        if isinstance(encoded_weather, torch.Tensor):
+            encoded_weather = encoded_weather.cpu().numpy()
+        return np.array([self.index_to_weather_code[idx] for idx in encoded_weather])
     
     def inverse_transform_features(self, scaled_features):
         """反标准化特征"""
@@ -262,6 +275,37 @@ class WeatherDataProcessor:
         original_targets[:, 2] = np.expm1(original_targets[:, 2])
         
         return original_targets
+
+    def adjust_predicted_weather(self, weather_code, rain, cloud):
+        """根据预测的降水量和云量调整天气代码"""
+        # 如果有降雨，根据降雨量确定天气代码
+        if isinstance(rain, (np.ndarray, list)):
+            if len(rain.shape) > 0:
+                rain = rain[0]
+            rain = float(rain)
+        if isinstance(cloud, (np.ndarray, list)):
+            if len(cloud.shape) > 0:
+                cloud = cloud[0]
+            cloud = float(cloud)
+            
+        # 将天气代码转换为原始代码
+        original_code = self.index_to_weather_code[weather_code]
+            
+        # 检查天气代码和降雨量是否一致
+        is_rainy_weather = original_code in [51, 53, 55, 61, 63, 65]
+        
+        # 如果天气代码表示有雨但实际没有雨，或者天气代码表示无雨但实际有雨，则进行调整
+        if (is_rainy_weather and rain <= 0) or (not is_rainy_weather and rain > 0):
+            if rain > 0:
+                for threshold, code in reversed(self.rain_thresholds):
+                    if rain >= threshold:
+                        return self.weather_code_to_index[code]
+            else:
+                for threshold, code in reversed(self.cloud_thresholds):
+                    if cloud >= threshold:
+                        return self.weather_code_to_index[code]
+        
+        return weather_code  # 如果天气代码和降雨量一致，保持原始预测的天气代码
 
 class WeatherDataset(Dataset):
     def __init__(self, sequences, targets):

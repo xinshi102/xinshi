@@ -158,16 +158,6 @@
     </div>
 
     <script>
-        // 显示加载动画
-        function showLoading() {
-            document.getElementById('loadingSpinner').style.display = 'block';
-        }
-
-        // 隐藏加载动画
-        function hideLoading() {
-            document.getElementById('loadingSpinner').style.display = 'none';
-        }
-
         // 显示错误信息
         function showError(message) {
             const errorAlert = document.getElementById('errorAlert');
@@ -177,6 +167,22 @@
             setTimeout(() => {
                 errorAlert.style.display = 'none';
             }, 5000);
+        }
+
+        // 显示加载状态
+        function showLoading() {
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            if (loadingSpinner) {
+                loadingSpinner.style.display = 'block';
+            }
+        }
+
+        // 隐藏加载状态
+        function hideLoading() {
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            if (loadingSpinner) {
+                loadingSpinner.style.display = 'none';
+            }
         }
 
         // 上传按钮点击事件
@@ -189,6 +195,12 @@
             const file = event.target.files[0];
             if (!file) return;
             
+            // 检查文件类型
+            if (!file.name.endsWith('.csv')) {
+                showError('请上传CSV格式的文件');
+                return;
+            }
+            
             showLoading();
             const formData = new FormData();
             formData.append('file', file);
@@ -199,15 +211,25 @@
                     body: formData
                 });
                 
+                const data = await response.json();
+                
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(data.error || '文件上传失败');
                 }
                 
+                // 清空文件输入框，允许重复上传相同文件
+                event.target.value = '';
+                
+                // 显示分析界面
                 document.querySelector('.upload-section').style.display = 'none';
                 document.querySelector('.analysis-section').style.display = 'block';
+                
+                // 加载分析数据
                 await loadAnalysisData();
             } catch (error) {
-                showError('文件上传失败，请重试');
+                showError(error.message || '文件上传失败，请重试');
+                // 清空文件输入框
+                event.target.value = '';
             } finally {
                 hideLoading();
             }
@@ -524,31 +546,39 @@
                 const response = await fetch('http://localhost:5000/api/analysis-data');
                 const data = await response.json();
                 
-                if (data.error) {
-                    throw new Error(data.error);
+                if (!response.ok) {
+                    throw new Error(data.error || '获取分析数据失败');
                 }
-                window.lastAnalysisData = data;
-                // 缓存小时数据
-                window.tempHumidityCache.temperature.hour = data.temperatureTrend;
-                window.tempHumidityCache.humidity.hour = data.humidityTrend;
-                // 缓存天数据
-                window.tempHumidityCache.temperature.day = aggregateToDay(data.temperatureTrend);
-                window.tempHumidityCache.humidity.day = aggregateToDay(data.humidityTrend);
-                // 渲染所有图表
-                renderTemperatureTrendChart(window.tempHumidityCache.temperature.hour);
-                renderHumidityTrendChart(window.tempHumidityCache.humidity.hour);
-                renderPrecipitationDistributionChart(data.precipitationDistribution);
-                renderWeatherDistributionChart(data.weatherDistribution);
-                renderCloudCoverDistributionChart(data.cloudCoverDistribution);
-                renderWindSpeedDistributionChart(data.windSpeedDistribution);
-                renderCorrelationHeatmapChart(data.correlationMatrix);
-                renderHumidityHeatmapChart(data.humidityTrend);
-                // 设置时间维度切换器
-                setupTimeUnitSwitchers();
+                
+                // 更新图表
+                updateCharts(data);
             } catch (error) {
-                showError('分析数据加载失败');
+                showError(error.message || '加载分析数据失败，请重试');
             } finally {
                 hideLoading();
+            }
+        }
+
+        // 补充updateCharts函数，保证所有图表渲染函数都被安全调用
+        function updateCharts(data) {
+            if (data.temperatureTrend) renderTemperatureTrendChart(data.temperatureTrend);
+            if (data.humidityTrend) renderHumidityTrendChart(data.humidityTrend);
+            if (data.precipitationDistribution) renderPrecipitationDistributionChart(data.precipitationDistribution);
+            if (data.weatherDistribution) renderWeatherDistributionChart(data.weatherDistribution);
+            if (data.cloudCoverDistribution) renderCloudCoverDistributionChart(data.cloudCoverDistribution);
+            if (data.windSpeedDistribution) renderWindSpeedDistributionChart(data.windSpeedDistribution);
+            if (data.correlationMatrix) renderCorrelationHeatmapChart(data.correlationMatrix);
+            if (data.humidityHeatmap) renderHumidityHeatmapChart(data.humidityHeatmap);
+            // 缓存数据，便于窗口resize时重绘
+            window.lastAnalysisData = data;
+            // 缓存小时和天数据，便于切换
+            if (data.temperatureTrend) {
+                window.tempHumidityCache.temperature.hour = data.temperatureTrend;
+                window.tempHumidityCache.temperature.day = aggregateToDay(data.temperatureTrend);
+            }
+            if (data.humidityTrend) {
+                window.tempHumidityCache.humidity.hour = data.humidityTrend;
+                window.tempHumidityCache.humidity.day = aggregateToDay(data.humidityTrend);
             }
         }
 

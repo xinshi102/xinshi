@@ -1,0 +1,98 @@
+/* 欢迎区域样式 */
+.welcome-section {
+    text-align: center;
+    padding: 3rem;
+    background-color: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-top: 2rem;
+    animation: fadeIn 0.5s ease;
+}
+
+.welcome-section h1 {
+    color: #2c3e50;
+    margin-bottom: 2rem;
+    font-weight: 600;
+}
+
+/* 功能列表样式 */
+.feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 2rem 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.feature-list li {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 10px;
+    color: #495057;
+    line-height: 1.6;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+}
+
+.feature-list li:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 功能图标样式 */
+.feature-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: #007bff;
+}
+
+/* 功能卡片样式 */
+.feature-card {
+    text-align: center;
+    padding: 1.5rem;
+    border-radius: 10px;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.feature-card h3 {
+    color: #2c3e50;
+    margin: 1rem 0;
+    font-size: 1.25rem;
+}
+
+.feature-card p {
+    color: #6c757d;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .welcome-section {
+        padding: 2rem 1rem;
+    }
+
+    .feature-list {
+        grid-template-columns: 1fr;
+    }
+} 

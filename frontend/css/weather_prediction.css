@@ -1,0 +1,51 @@
+/* 图表容器样式 */
+.chart-container {
+    min-height: 400px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+}
+
+/* 预测控制区域样式 */
+.prediction-controls {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+/* 加载动画样式 */
+.loading-spinner {
+    display: none;
+    text-align: center;
+    margin: 20px 0;
+}
+
+/* 警告提示样式 */
+.alert {
+    display: none;
+    margin-bottom: 20px;
+}
+
+/* 天气图例样式 */
+.weather-legend {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* 天气代码项样式 */
+.weather-code-item {
+    display: inline-block;
+    margin: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #f8f9fa;
+    border-radius: 4px;
+    font-size: 0.9rem;
+} 

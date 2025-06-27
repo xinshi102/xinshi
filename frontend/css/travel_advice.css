@@ -1,0 +1,70 @@
+/* 出行建议卡片样式 */
+.travel-advice {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.travel-advice .icon {/*天气图标*/
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.travel-advice .advice-text {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+
+.travel-advice .details {
+    color: #666;
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+/* 不同天气状态的颜色 */
+.travel-advice.good {
+    border-left: 5px solid #28a745;
+}
+
+.travel-advice.warning {
+    border-left: 5px solid #ffc107;
+}
+
+.travel-advice.danger {
+    border-left: 5px solid #dc3545;
+}
+
+/* 加载动画样式 */
+.loading-spinner {
+    display: none;
+    text-align: center;
+    margin: 20px 0;
+}
+
+/* 错误提示样式 */
+.alert {
+    display: none;
+    margin-bottom: 20px;
+}
+
+/* 建议区域样式 */
+#adviceSection {
+    display: none;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+} 

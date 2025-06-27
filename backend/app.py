@@ -11,7 +11,10 @@ import json
 import math
 import shutil
 from typing import Any, Dict, List, Optional
+<<<<<<< HEAD
 import requests
+=======
+>>>>>>> 4e3f0ec5cd869cbb00f780636085133087ccdaf8
 
 # 添加项目根目录到Python路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -355,10 +358,13 @@ def get_analysis_data() -> Any:
                 'times': df.index.strftime('%Y-%m-%d %H:%M').tolist(),
                 'values': df['relativehumidity_2m (%)'].tolist()
             },
+<<<<<<< HEAD
             'precipitation_trend': {
                 'times': df.index.strftime('%Y-%m-%d %H:%M').tolist(),
                 'values': df['rain (mm)'].tolist()
             },
+=======
+>>>>>>> 4e3f0ec5cd869cbb00f780636085133087ccdaf8
             'precipitation_distribution': {
                 'categories': rain_labels,
                 'values': rain_counts
@@ -405,6 +411,7 @@ def get_current_weather() -> Any:
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+<<<<<<< HEAD
 DEEPSEEK_API_KEY = "sk-068f2a733db941c5a4581fb53ac97ece"  # 用户提供的DeepSeek API密钥
 
 def summarize_prediction_for_ai(prediction):
@@ -606,6 +613,8 @@ def deepseek_advice():
         print(traceback.format_exc())
         return jsonify({"error": f"调用DeepSeek失败: {str(e)}"}), 500
 
+=======
+>>>>>>> 4e3f0ec5cd869cbb00f780636085133087ccdaf8
 if __name__ == '__main__':
     print("启动Flask服务器...")
     print("项目根目录:", root_dir)

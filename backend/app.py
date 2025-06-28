@@ -10,11 +10,14 @@ import torch
 import json
 import math
 import shutil
+<<<<<<< HEAD
 from typing import Any, Dict, List, Optional
 <<<<<<< HEAD
 import requests
 =======
 >>>>>>> 4e3f0ec5cd869cbb00f780636085133087ccdaf8
+=======
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
 
 # 添加项目根目录到Python路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -37,14 +40,30 @@ CORS(app, resources={
     }
 })
 
+<<<<<<< HEAD
 # ========== 全局常量与初始化 ==========
+=======
+# 确保上传目录和旧文件目录存在
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
 UPLOAD_FOLDER = os.path.join(root_dir, 'uploads')
 OLD_FILES_FOLDER = os.path.join(root_dir, 'old_files')
 for folder in [UPLOAD_FOLDER, OLD_FILES_FOLDER]:
     if not os.path.exists(folder):
         os.makedirs(folder)
 
+<<<<<<< HEAD
 # 天气代码映射
+=======
+# 初始化天气处理器以获取天气代码描述
+try:
+    weather_processor = WeatherDataProcessor()
+    print("成功初始化天气处理器")
+except Exception as e:
+    print(f"初始化天气处理器时出错: {str(e)}")
+    print(traceback.format_exc())
+
+# 定义天气代码映射
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
 WEATHER_CODES = {
     0: "晴天",
     1: "多云",
@@ -58,6 +77,7 @@ WEATHER_CODES = {
     65: "大雨"
 }
 
+<<<<<<< HEAD
 # 初始化天气处理器
 try:
     weather_processor = WeatherDataProcessor()
@@ -71,6 +91,15 @@ def move_old_files() -> None:
     """将旧文件移动到old_files目录"""
     try:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+=======
+def move_old_files():
+    """将旧文件移动到old_files目录"""
+    try:
+        # 获取当前时间戳
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        # 移动uploads目录中的所有文件到old_files目录
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         for filename in os.listdir(UPLOAD_FOLDER):
             if filename.endswith('.csv'):
                 old_path = os.path.join(UPLOAD_FOLDER, filename)
@@ -81,6 +110,7 @@ def move_old_files() -> None:
     except Exception as e:
         print(f"移动旧文件时出错: {str(e)}")
 
+<<<<<<< HEAD
 def replace_nan(obj: Any) -> Any:
     """递归将NaN替换为None"""
     if isinstance(obj, float) and math.isnan(obj):
@@ -88,17 +118,30 @@ def replace_nan(obj: Any) -> Any:
     elif isinstance(obj, list):
         return [replace_nan(x) for x in obj]
     elif isinstance(obj, dict):#如果对象是字典使用字典推导式递归处理字典的每个值并返回新字典
+=======
+def replace_nan(obj):
+    if isinstance(obj, float) and math.isnan(obj):
+        return None
+    elif isinstance(obj, list):
+        return [replace_nan(x) for x in obj]
+    elif isinstance(obj, dict):
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         return {k: replace_nan(v) for k, v in obj.items()}
     else:
         return obj
 
+<<<<<<< HEAD
 def to_python_type(obj: Any) -> Any:
+=======
+def to_python_type(obj):
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
     """递归将numpy类型转换为Python原生类型"""
     if isinstance(obj, dict):
         return {k: to_python_type(v) for k, v in obj.items()}
     elif isinstance(obj, list):
         return [to_python_type(x) for x in obj]
     elif isinstance(obj, np.generic):
+<<<<<<< HEAD
         return obj.item()#使用item方法将Numpy的通用类型转换成python原生类型
     else:
         return obj
@@ -129,13 +172,66 @@ def upload_file() -> Any:
             'time', 'temperature_2m (°C)', 'relativehumidity_2m (%)',
             'rain (mm)', 'surface_pressure (hPa)', 'cloudcover (%)',
             'windspeed_10m (m/s)', 'weathercode (wmo code)'
+=======
+        return obj.item()
+    else:
+        return obj
+
+@app.route('/api/upload', methods=['POST'])
+def upload_file():
+    try:
+        print("接收到文件上传请求")
+        
+        if 'file' not in request.files:
+            print("错误：请求中没有文件")
+            return jsonify({'error': '没有文件上传'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            print("错误：没有选择文件")
+            return jsonify({'error': '没有选择文件'}), 400
+
+        print(f"上传的文件名: {file.filename}")
+
+        # 移动旧文件
+        move_old_files()
+
+        # 保存新文件
+        file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+        file.save(file_path)
+        print(f"文件已保存到: {file_path}")
+
+        # 读取数据
+        print("正在读取CSV文件...")
+        df = pd.read_csv(file_path)
+        print(f"CSV文件列名: {df.columns.tolist()}")
+        
+        # 检查必需的列是否存在
+        required_columns = [
+            'time', 
+            'temperature_2m (°C)', 
+            'relativehumidity_2m (%)',
+            'rain (mm)',
+            'surface_pressure (hPa)',
+            'cloudcover (%)',
+            'windspeed_10m (m/s)',
+            'weathercode (wmo code)'
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         ]
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
             error_msg = f"CSV文件缺少必需的列: {', '.join(missing_columns)}"
             print(f"错误：{error_msg}")
+<<<<<<< HEAD
             os.remove(file_path)
             return jsonify({'error': error_msg}), 400
+=======
+            # 删除无效文件
+            os.remove(file_path)
+            return jsonify({'error': error_msg}), 400
+
+        # 返回原始数据用于显示
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         response_data = {
             'times': df['time'].tolist(),
             'temperatures': df['temperature_2m (°C)'].tolist(),
@@ -144,11 +240,19 @@ def upload_file() -> Any:
         }
         print("数据处理成功，准备返回响应")
         return jsonify(response_data)
+<<<<<<< HEAD
+=======
+
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
     except pd.errors.EmptyDataError:
         error_msg = "上传的CSV文件是空的"
         print(f"错误：{error_msg}")
         if os.path.exists(file_path):
+<<<<<<< HEAD
             os.remove(file_path)#删除空文件防止占用
+=======
+            os.remove(file_path)
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         return jsonify({'error': error_msg}), 400
     except pd.errors.ParserError:
         error_msg = "CSV文件格式错误，请检查文件格式"
@@ -163,6 +267,7 @@ def upload_file() -> Any:
         print(traceback.format_exc())
         if os.path.exists(file_path):
             os.remove(file_path)
+<<<<<<< HEAD
         return jsonify({'error': error_msg}), 500#500表示服务器处理请求遇到无法处理的错误
 
 @app.route('/api/predict', methods=['GET', 'POST'])
@@ -172,6 +277,12 @@ def predict() -> Any:
     - GET/POST: duration参数指定预测时长（小时），默认72小时。
     - 返回：预测的时间序列、天气代码、温度、湿度、降水量等。
     """
+=======
+        return jsonify({'error': error_msg}), 500
+
+@app.route('/api/predict', methods=['GET', 'POST'])
+def predict():
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
     try:
         print("\n=== 开始预测过程 ===")
         # 获取预测时长参数
@@ -248,6 +359,7 @@ def predict() -> Any:
         except Exception as e:
             print(f"警告：生成天气描述时出错: {str(e)}")
             weather_descriptions = ["未知天气" for _ in weather_codes]
+<<<<<<< HEAD
 
         # 生成unique_weather_codes列表
         unique_codes = sorted(set(weather_codes))
@@ -256,6 +368,9 @@ def predict() -> Any:
             for code in unique_codes
         ]
 
+=======
+        
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         # 准备响应数据，确保所有字段为list且不为None
         response_data = {
             'times': list(times) if times is not None else [],
@@ -263,8 +378,12 @@ def predict() -> Any:
             'weather_descriptions': list(weather_descriptions) if weather_descriptions is not None else [],
             'temperatures': list(temperatures) if temperatures is not None else [],
             'humidities': list(humidities) if humidities is not None else [],
+<<<<<<< HEAD
             'precipitations': list(precipitations) if precipitations is not None else [],
             'unique_weather_codes': unique_weather_codes
+=======
+            'precipitations': list(precipitations) if precipitations is not None else []
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         }
         # 处理NaN值
         response_data = replace_nan(response_data)
@@ -280,6 +399,7 @@ def predict() -> Any:
         return jsonify({'error': error_msg}), 500
 
 @app.route('/api/weather-codes', methods=['GET'])
+<<<<<<< HEAD
 def get_weather_codes() -> Any:
     """返回天气代码与描述的映射表。"""
     return jsonify(WEATHER_CODES)
@@ -294,18 +414,35 @@ def get_analysis_data() -> Any:
         # 获取时间单位参数
         time_unit = request.args.get('time_unit', 'hour')
         
+=======
+def get_weather_codes():
+    return jsonify(WEATHER_CODES)
+
+@app.route('/api/analysis-data', methods=['GET'])
+def get_analysis_data():
+    try:
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         # 获取最新上传的文件
         upload_dir = os.path.join(root_dir, 'uploads')
         if not os.path.exists(upload_dir):
             return jsonify({'error': '请先上传数据文件'}), 400
+<<<<<<< HEAD
         files = os.listdir(upload_dir)
         if not files:
             return jsonify({'error': '请先上传数据文件'}), 400
+=======
+            
+        files = os.listdir(upload_dir)
+        if not files:
+            return jsonify({'error': '请先上传数据文件'}), 400
+            
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         latest_file = max([os.path.join(upload_dir, f) for f in files], key=os.path.getctime)
         
         # 读取分析数据
         df = pd.read_csv(latest_file, parse_dates=['time'], index_col='time')
         
+<<<<<<< HEAD
         # 根据时间单位进行数据聚合
         if time_unit == 'day':
             # 按天聚合数据
@@ -384,11 +521,56 @@ def get_analysis_data() -> Any:
                                     'surface_pressure (hPa)', 'cloudcover (%)', 'windspeed_10m (m/s)']].corr().values.tolist()
             },
             'weather_codes': weather_codes_list
+=======
+        # 准备分析数据
+        analysis_data = {
+            'temperatureTrend': {
+                'times': df.index.strftime('%Y-%m-%d %H:%M').tolist(),
+                'values': df['temperature_2m (°C)'].tolist()
+            },
+            'humidityTrend': {
+                'times': df.index.strftime('%Y-%m-%d %H:%M').tolist(),
+                'values': df['relativehumidity_2m (%)'].tolist()
+            },
+            'precipitationDistribution': {
+                'bins': np.histogram(df['rain (mm)'], bins=50)[1].tolist()[:-1],
+                'counts': np.histogram(df['rain (mm)'], bins=50)[0].tolist()
+            },
+            'weatherDistribution': {
+                'categories': [WEATHER_CODES.get(code, f'未知({code})') for code in df['weathercode (wmo code)'].unique()],
+                'values': df['weathercode (wmo code)'].value_counts().tolist(),
+                'codes': df['weathercode (wmo code)'].unique().tolist()
+            },
+            'cloudCoverDistribution': {
+                'bins': np.histogram(df['cloudcover (%)'], bins=50)[1].tolist()[:-1],
+                'counts': np.histogram(df['cloudcover (%)'], bins=50)[0].tolist()
+            },
+            # 新增风速分布
+            'windSpeedDistribution': {
+                'bins': np.histogram(df['windspeed_10m (m/s)'], bins=50)[1].tolist()[:-1],
+                'counts': np.histogram(df['windspeed_10m (m/s)'], bins=50)[0].tolist()
+            },
+            # 新增相关性矩阵
+            'correlationMatrix': {
+                'categories': ['温度', '湿度', '降水量', '气压', '云量', '风速'],
+                'values': df[['temperature_2m (°C)', 'relativehumidity_2m (%)', 'rain (mm)', 
+                              'surface_pressure (hPa)', 'cloudcover (%)', 'windspeed_10m (m/s)']].corr().values.tolist()
+            },
+            # 新增湿度热力图数据
+            'humidityHeatmap': {
+                'times': df.index.strftime('%Y-%m-%d %H:%M').tolist(),
+                'values': df['relativehumidity_2m (%)'].tolist()
+            }
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         }
         
         # 处理NaN值
         analysis_data = replace_nan(analysis_data)
         return jsonify(analysis_data)
+<<<<<<< HEAD
+=======
+        
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
     except Exception as e:
         error_msg = f"获取分析数据时出错: {str(e)}"
         print(f"错误：{error_msg}")
@@ -397,20 +579,29 @@ def get_analysis_data() -> Any:
         return jsonify({'error': error_msg}), 500
 
 @app.route('/api/current-weather', methods=['GET'])
+<<<<<<< HEAD
 def get_current_weather() -> Any:
     """返回最新一条天气代码。"""
+=======
+def get_current_weather():
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
     try:
         upload_dir = os.path.join(root_dir, 'uploads')
         files = os.listdir(upload_dir)
         if not files:
             return jsonify({'error': '请先上传数据文件'}), 400
+<<<<<<< HEAD
         latest_file = max([os.path.join(upload_dir, f) for f in files], key=os.path.getctime)#max是返回最大的元素，key是创建时间，也就是返回最新的元素
+=======
+        latest_file = max([os.path.join(upload_dir, f) for f in files], key=os.path.getctime)
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         df = pd.read_csv(latest_file)
         weather_code = int(df['weathercode (wmo code)'].iloc[-1])
         return jsonify({'weather_code': weather_code})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 DEEPSEEK_API_KEY = "sk-068f2a733db941c5a4581fb53ac97ece"  # 用户提供的DeepSeek API密钥
 
@@ -615,6 +806,8 @@ def deepseek_advice():
 
 =======
 >>>>>>> 4e3f0ec5cd869cbb00f780636085133087ccdaf8
+=======
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
 if __name__ == '__main__':
     print("启动Flask服务器...")
     print("项目根目录:", root_dir)

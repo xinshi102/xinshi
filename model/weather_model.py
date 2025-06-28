@@ -6,9 +6,15 @@ import torch.nn.functional as F
 # 设置编码
 sys.stdout.reconfigure(encoding='utf-8')
 
+<<<<<<< HEAD
 class WeatherLSTM(nn.Module):#继承module类，自定义lstm模型
     def __init__(self, input_size, hidden_size, num_layers, output_size, weather_categories):
         super(WeatherLSTM, self).__init__()#初始化
+=======
+class WeatherLSTM(nn.Module):
+    def __init__(self, input_size, hidden_size, num_layers, output_size, weather_categories):
+        super(WeatherLSTM, self).__init__()
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         self.hidden_size = hidden_size
         self.weather_categories = weather_categories  # 10种天气类型
         
@@ -18,6 +24,7 @@ class WeatherLSTM(nn.Module):#继承module类，自定义lstm模型
             hidden_size=hidden_size,
             num_layers=num_layers,
             batch_first=True,
+<<<<<<< HEAD
             dropout=0.3 if num_layers > 1 else 0#防止两层lstm层过拟合
         )
         
@@ -27,35 +34,66 @@ class WeatherLSTM(nn.Module):#继承module类，自定义lstm模型
         # 共享特征提取层
         self.shared_features = nn.Sequential(#提供通用的天气特征，并且被多个任务共享使用//容器类，包含多层
             nn.Linear(hidden_size, hidden_size // 2),#降低一半特征维度
+=======
+            dropout=0.3 if num_layers > 1 else 0
+        )
+        
+        # 添加dropout层
+        self.dropout = nn.Dropout(0.3)
+        
+        # 共享特征提取层
+        self.shared_features = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size // 2),
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
             nn.ReLU(),
             nn.LayerNorm(hidden_size // 2)
         )
         
         # 云量特征提取层
         self.cloud_features = nn.Sequential(
+<<<<<<< HEAD
             nn.Linear(hidden_size // 2, hidden_size // 4),#相对简单的云量特征，降低成四分之一
             nn.ReLU(),#截断负值
             nn.LayerNorm(hidden_size // 4),#层归一化，加速训练
+=======
+            nn.Linear(hidden_size // 2, hidden_size // 4),
+            nn.ReLU(),
+            nn.LayerNorm(hidden_size // 4),
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
             nn.Dropout(0.2)
         )
         
         # 天气代码分类器 - 使用注意力机制
         self.weather_attention = nn.Sequential(
             nn.Linear(hidden_size // 2, hidden_size // 4),
+<<<<<<< HEAD
             nn.Tanh(),#归一化，映射到【-1，1】，增加非线性表达能力，跟后续的softmax配合得到最终的注意力分数
             nn.Linear(hidden_size // 4, 1)#注意力机制只需要一个权重值，所以降维1
+=======
+            nn.Tanh(),
+            nn.Linear(hidden_size // 4, 1)
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         )
         
         # 云量注意力机制
         self.cloud_attention = nn.Sequential(
             nn.Linear(hidden_size // 4, hidden_size // 8),
+<<<<<<< HEAD
             nn.Tanh(),#双曲正切
             nn.Linear(hidden_size // 8, 1)#同理
+=======
+            nn.Tanh(),
+            nn.Linear(hidden_size // 8, 1)
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         )
         
         # 天气分类器 - 结合云量特征
         self.weather_classifier = nn.Sequential(
+<<<<<<< HEAD
             nn.Linear(hidden_size // 2 + hidden_size // 4 + hidden_size // 2 + hidden_size // 4, hidden_size // 2),#共享特征+云量特征+天气注意力特征+降水特征
+=======
+            nn.Linear(hidden_size // 2 + hidden_size // 4 + hidden_size // 2 + hidden_size // 4, hidden_size // 2),
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
             nn.ReLU(),
             nn.LayerNorm(hidden_size // 2),
             nn.Dropout(0.2),
@@ -95,7 +133,12 @@ class WeatherLSTM(nn.Module):#继承module类，自定义lstm模型
             nn.Linear(hidden_size // 4, hidden_size // 8),
             nn.ReLU(),
             nn.LayerNorm(hidden_size // 8),
+<<<<<<< HEAD
             nn.Linear(hidden_size // 8, 1)
+=======
+            nn.Linear(hidden_size // 8, 1),
+            nn.ReLU()
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         )
         
         # 温度范围参数
@@ -119,6 +162,7 @@ class WeatherLSTM(nn.Module):#继承module类，自定义lstm模型
     def forward(self, x):
         # LSTM前向传播
         lstm_out, _ = self.lstm(x)
+<<<<<<< HEAD
         lstm_out = self.dropout(lstm_out)#这里又dropout了一次，防止过拟合
         
         # 确保序列长度为72
@@ -129,11 +173,24 @@ class WeatherLSTM(nn.Module):#继承module类，自定义lstm模型
             last_step = lstm_out[:, -1:, :]#如果序列长度不够，用最后一个时间步来提取
             padding = last_step.repeat(1, 72 - seq_len, 1)
             lstm_out = torch.cat([lstm_out, padding], dim=1)#拼接
+=======
+        lstm_out = self.dropout(lstm_out)
+        
+        # 确保序列长度为72
+        batch_size, seq_len, hidden = lstm_out.shape
+        if seq_len > 72:
+            lstm_out = lstm_out[:, :72, :]
+        elif seq_len < 72:
+            last_step = lstm_out[:, -1:, :]
+            padding = last_step.repeat(1, 72 - seq_len, 1)
+            lstm_out = torch.cat([lstm_out, padding], dim=1)
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         
         # 提取共享特征
         shared_features = self.shared_features(lstm_out)
         
         # 提取云量特征
+<<<<<<< HEAD
         cloud_features = self.cloud_features(shared_features)#通过在共享特征里面提取云量特征，系统能更好的学习云量与其他天气特征的关系
         
         # 计算云量注意力权重
@@ -148,6 +205,22 @@ class WeatherLSTM(nn.Module):#继承module类，自定义lstm模型
         
         # 合并特征用于降水预测
         precip_input = torch.cat([shared_features, cloud_features], dim=-1)#特征加强过的云量加上共享为降水服务
+=======
+        cloud_features = self.cloud_features(shared_features)
+        
+        # 计算云量注意力权重
+        cloud_attention = self.cloud_attention(cloud_features)
+        cloud_attention = F.softmax(cloud_attention, dim=1)
+        cloud_features = cloud_features * cloud_attention
+        
+        # 计算天气注意力权重
+        weather_attention = self.weather_attention(shared_features)
+        weather_attention = F.softmax(weather_attention, dim=1)
+        attended_features = shared_features * weather_attention
+        
+        # 合并特征用于降水预测
+        precip_input = torch.cat([shared_features, cloud_features], dim=-1)
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         # 计算降水注意力权重
         precip_attention = self.precip_attention(precip_input)
         precip_attention = F.softmax(precip_attention, dim=1)
@@ -219,6 +292,7 @@ def calculate_loss(outputs, targets):
     
     # 计算降水量权重
     precip_weights = torch.ones_like(precip_target)
+<<<<<<< HEAD
     # 根据天气类型设置权重（全部提升10倍）
     precip_weights[weather_target == 51] = 15.0  # 毛毛雨(轻)
     precip_weights[weather_target == 53] = 18.0  # 毛毛雨(中)
@@ -226,6 +300,15 @@ def calculate_loss(outputs, targets):
     precip_weights[weather_target == 61] = 25.0  # 雨(轻)
     precip_weights[weather_target == 63] = 30.0  # 雨(中)
     precip_weights[weather_target == 65] = 35.0  # 雨(重)
+=======
+    # 根据天气类型设置权重
+    precip_weights[weather_target == 51] = 1.5  # 毛毛雨(轻)
+    precip_weights[weather_target == 53] = 1.8  # 毛毛雨(中)
+    precip_weights[weather_target == 55] = 2.0  # 毛毛雨(重)
+    precip_weights[weather_target == 61] = 2.5  # 雨(轻)
+    precip_weights[weather_target == 63] = 3.0  # 雨(中)
+    precip_weights[weather_target == 65] = 3.5  # 雨(重)
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
     
     # 加权降水量损失
     precip_loss = (0.3 * precip_class_loss + 0.7 * precip_regression_loss) * precip_weights.mean()

@@ -4,11 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>出行建议</title>
+<<<<<<< HEAD
     <!-- 外部样式表 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="bootstrap-icons/bootstrap-icons-1.12.1/bootstrap-icons.css">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/travel_advice.css">
+=======
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="bootstrap-icons/bootstrap-icons-1.12.1/bootstrap-icons.css">
+    <link rel="stylesheet" href="styles.css">
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
 </head>
 <body>
     <!-- 侧边导航栏 -->
@@ -17,10 +23,37 @@
             <h3>天气预测系统</h3>
         </div>
         <ul class="sidebar-menu">
+<<<<<<< HEAD
             <li><a href="index.html"><i class="bi bi-house"></i>首页</a></li>
             <li><a href="data_analysis.html"><i class="bi bi-graph-up"></i>数据分析</a></li>
             <li><a href="weather_prediction.html"><i class="bi bi-cloud-sun"></i>天气预测</a></li>
             <li><a href="travel_advice.html"><i class="bi bi-umbrella"></i>出行建议</a></li>
+=======
+            <li>
+                <a href="index.html">
+                    <i class="bi bi-house"></i>
+                    首页
+                </a>
+            </li>
+            <li>
+                <a href="data_analysis.html">
+                    <i class="bi bi-graph-up"></i>
+                    数据分析
+                </a>
+            </li>
+            <li>
+                <a href="weather_prediction.html">
+                    <i class="bi bi-cloud-sun"></i>
+                    天气预测
+                </a>
+            </li>
+            <li>
+                <a href="travel_advice.html">
+                    <i class="bi bi-umbrella"></i>
+                    出行建议
+                </a>
+            </li>
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         </ul>
     </div>
 
@@ -39,7 +72,11 @@
         </div>
 
         <!-- 出行建议区域 -->
+<<<<<<< HEAD
         <div id="adviceSection">
+=======
+        <div id="adviceSection" style="display: none;">
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
             <div class="travel-advice" id="adviceCard">
                 <div class="icon" id="weatherIcon"></div>
                 <div class="advice-text" id="adviceText"></div>
@@ -48,7 +85,91 @@
         </div>
     </div>
 
+<<<<<<< HEAD
     <!-- 页面脚本 -->
     <script src="js/travel_advice.js"></script>
+=======
+    <script>
+        // 显示加载动画
+        function showLoading() {
+            document.getElementById('loadingSpinner').style.display = 'block';
+        }
+
+        // 隐藏加载动画
+        function hideLoading() {
+            document.getElementById('loadingSpinner').style.display = 'none';
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            const errorAlert = document.getElementById('errorAlert');
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorAlert.style.display = 'block';
+            setTimeout(() => {
+                errorAlert.style.display = 'none';
+            }, 5000);
+        }
+
+        // 更新出行建议
+        function updateAdvice(weatherCode) {
+            const adviceCard = document.getElementById('adviceCard');
+            const weatherIcon = document.getElementById('weatherIcon');
+            const adviceText = document.getElementById('adviceText');
+            const adviceDetails = document.getElementById('adviceDetails');
+
+            // 根据天气代码设置建议
+            if (weatherCode === 0 || weatherCode === 1) { // 晴天或部分晴天
+                adviceCard.className = 'travel-advice warning';
+                weatherIcon.innerHTML = '<i class="bi bi-sun"></i>';
+                adviceText.textContent = '阳光明媚，但紫外线有点调皮哦~';
+                adviceDetails.textContent = '记得涂防晒霜，戴上可爱的帽子和太阳镜，保护好自己才能美美哒~';
+            } else if (weatherCode === 2 || weatherCode === 3) { // 多云
+                adviceCard.className = 'travel-advice good';
+                weatherIcon.innerHTML = '<i class="bi bi-cloud-sun"></i>';
+                adviceText.textContent = '今天是个适合约会的好天气呢~';
+                adviceDetails.textContent = '微风不燥，阳光正好，约上小伙伴一起去感受春天的气息吧！';
+            } else if (weatherCode === 51 || weatherCode === 52 || weatherCode === 53) { // 毛毛雨
+                adviceCard.className = 'travel-advice warning';
+                weatherIcon.innerHTML = '<i class="bi bi-cloud-drizzle"></i>';
+                adviceText.textContent = '小雨淅淅沥沥，记得带上你的小伞伞~';
+                adviceDetails.textContent = '虽然雨不大，但也要注意保暖哦，感冒了可不好受呢~';
+            } else if (weatherCode === 61) { // 小雨
+                adviceCard.className = 'travel-advice warning';
+                weatherIcon.innerHTML = '<i class="bi bi-cloud-rain"></i>';
+                adviceText.textContent = '小雨滴答滴答，出门要记得带伞哦~';
+                adviceDetails.textContent = '穿上防水鞋，带上雨伞，让雨滴成为你出行的伴奏曲~';
+            } else if (weatherCode === 62 || weatherCode === 63) { // 大雨
+                adviceCard.className = 'travel-advice danger';
+                weatherIcon.innerHTML = '<i class="bi bi-cloud-rain-heavy"></i>';
+                adviceText.textContent = '大雨哗啦啦，不如在家喝杯热茶~';
+                adviceDetails.textContent = '如果一定要出门，记得穿好雨衣，带上雨伞，路上要小心哦~';
+            }
+        }
+
+        // 获取天气数据
+        async function getWeatherData() {
+            showLoading();
+            try {
+                const response = await fetch('http://localhost:5000/api/current-weather');
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                document.getElementById('adviceSection').style.display = 'block';
+                updateAdvice(data.weather_code);
+            } catch (error) {
+                showError('获取天气数据失败: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 页面加载时获取天气数据
+        document.addEventListener('DOMContentLoaded', getWeatherData);
+    </script>
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
 </body>
 </html> 

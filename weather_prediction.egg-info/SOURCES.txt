@@ -1,0 +1,13 @@
+README.md
+setup.py
+model/__init__.py
+model/evaluate.py
+model/predict.py
+model/train.py
+model/weather_model.py
+model/weather_processor.py
+weather_prediction.egg-info/PKG-INFO
+weather_prediction.egg-info/SOURCES.txt
+weather_prediction.egg-info/dependency_links.txt
+weather_prediction.egg-info/requires.txt
+weather_prediction.egg-info/top_level.txt

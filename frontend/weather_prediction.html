@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>天气预测</title>
+<<<<<<< HEAD
     <!-- 外部样式表 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="bootstrap-icons/bootstrap-icons-1.12.1/bootstrap-icons.css">
@@ -11,6 +12,54 @@
     <link rel="stylesheet" href="css/weather_prediction.css">
     <!-- 外部脚本 -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+=======
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="bootstrap-icons/bootstrap-icons-1.12.1/bootstrap-icons.css">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        .chart-container {
+            min-height: 400px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+        }
+        .prediction-controls {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .alert {
+            display: none;
+            margin-bottom: 20px;
+        }
+        .weather-legend {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .weather-code-item {
+            display: inline-block;
+            margin: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+    </style>
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
 </head>
 <body>
     <!-- 侧边导航栏 -->
@@ -19,10 +68,37 @@
             <h3>天气预测系统</h3>
         </div>
         <ul class="sidebar-menu">
+<<<<<<< HEAD
             <li><a href="index.html"><i class="bi bi-house"></i>首页</a></li>
             <li><a href="data_analysis.html"><i class="bi bi-graph-up"></i>数据分析</a></li>
             <li><a href="weather_prediction.html"><i class="bi bi-cloud-sun"></i>天气预测</a></li>
             <li><a href="travel_advice.html"><i class="bi bi-umbrella"></i>出行建议</a></li>
+=======
+            <li>
+                <a href="index.html">
+                    <i class="bi bi-house"></i>
+                    首页
+                </a>
+            </li>
+            <li>
+                <a href="data_analysis.html">
+                    <i class="bi bi-graph-up"></i>
+                    数据分析
+                </a>
+            </li>
+            <li>
+                <a href="weather_prediction.html">
+                    <i class="bi bi-cloud-sun"></i>
+                    天气预测
+                </a>
+            </li>
+            <li>
+                <a href="travel_advice.html">
+                    <i class="bi bi-umbrella"></i>
+                    出行建议
+                </a>
+            </li>
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         </ul>
     </div>
 
@@ -87,7 +163,140 @@
         </div>
     </div>
 
+<<<<<<< HEAD
     <!-- 页面脚本 -->
     <script src="js/weather_prediction.js"></script>
+=======
+    <script>
+        // 显示加载动画
+        function showLoading() {
+            document.getElementById('loadingSpinner').style.display = 'block';
+        }
+
+        // 隐藏加载动画
+        function hideLoading() {
+            document.getElementById('loadingSpinner').style.display = 'none';
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            const errorAlert = document.getElementById('errorAlert');
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorAlert.style.display = 'block';
+            setTimeout(() => {
+                errorAlert.style.display = 'none';
+            }, 5000);
+        }
+
+        // 安全初始化echarts实例
+        function safeInitEcharts(domId) {
+            const dom = document.getElementById(domId);
+            if (!dom) return null;
+            if (echarts.getInstanceByDom(dom)) {
+                echarts.dispose(dom);
+            }
+            return echarts.init(dom);
+        }
+
+        // 渲染预测图表
+        function renderPredictionCharts(data) {
+            // 保证所有字段为数组
+            const times = Array.isArray(data.times) ? data.times : [];
+            const weather_codes = Array.isArray(data.weather_codes) ? data.weather_codes : [];
+            const weather_descriptions = Array.isArray(data.weather_descriptions) ? data.weather_descriptions : [];
+            const temperatures = Array.isArray(data.temperatures) ? data.temperatures : [];
+            const humidities = Array.isArray(data.humidities) ? data.humidities : [];
+            const precipitations = Array.isArray(data.precipitations) ? data.precipitations : [];
+
+            // 渲染天气代码图表
+            window.weatherCodeChart = safeInitEcharts('weatherCodeChart');
+            window.weatherCodeChart.setOption({
+                title: { text: '天气类型预测' },
+                tooltip: { trigger: 'axis', formatter: function(params) {
+                    const idx = params[0].dataIndex;
+                    return `${params[0].name}<br/>天气代码: ${weather_codes[idx]}<br/>天气描述: ${weather_descriptions[idx]}`;
+                } },
+                xAxis: { type: 'category', data: times },
+                yAxis: { name: '天气代码', type: 'category', data: [...new Set(weather_codes)] },
+                series: [{ name: '天气类型', type: 'line', data: weather_codes }]
+            });
+
+            // 渲染温度图表
+            window.temperatureChart = safeInitEcharts('temperatureChart');
+            window.temperatureChart.setOption({
+                title: { text: '温度预测' },
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'category', data: times },
+                yAxis: { name: '温度 (°C)' },
+                series: [{ name: '温度', type: 'line', data: temperatures }]
+            });
+
+            // 渲染湿度图表
+            window.humidityChart = safeInitEcharts('humidityChart');
+            window.humidityChart.setOption({
+                title: { text: '湿度预测' },
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'category', data: times },
+                yAxis: { name: '湿度 (%)' },
+                series: [{ name: '湿度', type: 'line', data: humidities }]
+            });
+
+            // 渲染降水量图表
+            window.precipitationChart = safeInitEcharts('precipitationChart');
+            window.precipitationChart.setOption({
+                title: { text: '降水量预测' },
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'category', data: times },
+                yAxis: { name: '降水量 (mm)' },
+                series: [{ name: '降水量', type: 'line', data: precipitations }]
+            });
+        }
+
+        // 更新天气代码图例
+        function updateWeatherCodeLegend(uniqueWeatherCodes) {
+            const container = document.getElementById('weatherCodeList');
+            container.innerHTML = '';
+            (uniqueWeatherCodes || []).forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'weather-code-item';
+                div.textContent = `${item.code}: ${item.desc}`;
+                container.appendChild(div);
+            });
+        }
+
+        // 启动预测
+        document.getElementById('startPredictionBtn').addEventListener('click', async function() {
+            showLoading();
+            try {
+                const duration = document.getElementById('predictionDuration').value;
+                const response = await fetch(`http://localhost:5000/api/predict?duration=${duration}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                document.getElementById('predictionSection').style.display = 'block';
+                updateWeatherCodeLegend(data.unique_weather_codes);
+                renderPredictionCharts(data);
+            } catch (error) {
+                showError('预测服务启动失败: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // 窗口大小改变时重新调整图表大小
+        window.addEventListener('resize', function() {
+            if (window.weatherCodeChart) {
+                window.weatherCodeChart.resize();
+                window.temperatureChart.resize();
+                window.humidityChart.resize();
+                window.precipitationChart.resize();
+            }
+        });
+    </script>
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
 </body>
 </html> 

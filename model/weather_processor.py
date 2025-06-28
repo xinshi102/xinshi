@@ -6,9 +6,15 @@ from torch.utils.data import Dataset, DataLoader
 
 class WeatherDataProcessor:
     def __init__(self):
+<<<<<<< HEAD
         self.scaler = StandardScaler()#初始化一个数值型特征的标准化器
         self.weather_encoder = LabelEncoder()#初始化一个标签的天气代码编码器
         self.is_fitted = False#是否拟合
+=======
+        self.scaler = StandardScaler()
+        self.weather_encoder = LabelEncoder()
+        self.is_fitted = False
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         self.feature_columns = [
             'temperature_2m (°C)',
             'relativehumidity_2m (%)',
@@ -25,14 +31,24 @@ class WeatherDataProcessor:
         ]
         
         # 保存标准化参数
+<<<<<<< HEAD
         self.means = None#均值
         self.stds = None#标准差
+=======
+        self.means = None
+        self.stds = None
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         
         # 更新天气代码映射
         self.weather_codes = [0, 1, 2, 3, 51, 53, 55, 61, 63, 65]
         # 添加天气代码到连续索引的映射
+<<<<<<< HEAD
         self.weather_code_to_index = {code: idx for idx, code in enumerate(self.weather_codes)}#将天气代码转化成索引
         self.index_to_weather_code = {idx: code for code, idx in self.weather_code_to_index.items()}#将索引转化成天气代码
+=======
+        self.weather_code_to_index = {code: idx for idx, code in enumerate(self.weather_codes)}
+        self.index_to_weather_code = {idx: code for code, idx in self.weather_code_to_index.items()}
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         
         self.rain_thresholds = [
             (5.0, 65),    # 大雨 (>5mm)
@@ -76,7 +92,11 @@ class WeatherDataProcessor:
     def fit(self, df):
         """在训练数据上拟合编码器和标准化器"""
         # 创建时间特征
+<<<<<<< HEAD
         df['hour'] = df.index.hour#标签索引切片
+=======
+        df['hour'] = df.index.hour
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         df['day_of_week'] = df.index.dayofweek
         df['month'] = df.index.month
         
@@ -86,7 +106,11 @@ class WeatherDataProcessor:
         # 将天气代码转换为连续索引
         df['weathercode (wmo code)'] = df['weathercode (wmo code)'].map(self.weather_code_to_index)
         
+<<<<<<< HEAD
         # 批量创建滞后特征，1，24，48,引入历史信息
+=======
+        # 批量创建滞后特征
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         lag_features = []
         for col in self.feature_columns:
             for lag in [1, 24, 48]:
@@ -98,6 +122,7 @@ class WeatherDataProcessor:
         rolling_features = []
         for col in self.feature_columns:
             rolling_mean = df[col].rolling(window=24).mean()
+<<<<<<< HEAD
             rolling_mean.name = f'{col}_rolling_mean_24'#24小时滚动均值，反映短期趋势
             rolling_std = df[col].rolling(window=24).std()
             rolling_std.name = f'{col}_rolling_std_24'#24小时滚动标准差，反映波动情况
@@ -105,6 +130,15 @@ class WeatherDataProcessor:
         
         # 使用pd.concat一次性合并所有特征
         all_features = pd.concat([df] + lag_features + rolling_features, axis=1)#本身的df与其他两个df合并，按列评价且横向合并
+=======
+            rolling_mean.name = f'{col}_rolling_mean_24'
+            rolling_std = df[col].rolling(window=24).std()
+            rolling_std.name = f'{col}_rolling_std_24'
+            rolling_features.extend([rolling_mean, rolling_std])
+        
+        # 使用pd.concat一次性合并所有特征
+        all_features = pd.concat([df] + lag_features + rolling_features, axis=1)
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         
         # 删除包含NaN的行
         all_features = all_features.dropna()
@@ -114,20 +148,32 @@ class WeatherDataProcessor:
             raise ValueError("处理后的数据为空，请检查输入数据的有效性")
         
         # 拟合标准化器
+<<<<<<< HEAD
         numeric_features = [col for col in all_features.columns if col not in ['weathercode (wmo code)']]#挑出类别列
+=======
+        numeric_features = [col for col in all_features.columns if col not in ['weathercode (wmo code)']]
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         self.scaler.fit(all_features[numeric_features])
         
         # 保存标准化参数
         self.means = self.scaler.mean_
         self.stds = self.scaler.scale_
         
+<<<<<<< HEAD
         # 拟合天气编码器，让标准化器记住所有数字特征的均值和标准差对新数据做同样的标准化处理
+=======
+        # 拟合天气编码器
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         all_weather_codes = np.array(self.weather_codes)
         current_codes = all_features['weathercode (wmo code)'].astype(int).unique()
         all_weather_codes = np.unique(np.concatenate([all_weather_codes, current_codes]))
         self.weather_encoder.fit(all_weather_codes)
         
+<<<<<<< HEAD
         self.is_fitted = True#这下记住了
+=======
+        self.is_fitted = True
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         return all_features
     
     def determine_weather_code(self, row):
@@ -190,7 +236,11 @@ class WeatherDataProcessor:
         all_features = pd.concat([df] + lag_features + rolling_features, axis=1)
         
         # 删除包含NaN的行
+<<<<<<< HEAD
         all_features = all_features.dropna()#默认按行删除
+=======
+        all_features = all_features.dropna()
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         
         # 确保数据不为空
         if len(all_features) == 0:
@@ -198,7 +248,11 @@ class WeatherDataProcessor:
         
         # 标准化数值特征
         numeric_features = [col for col in all_features.columns if col not in ['weathercode (wmo code)']]
+<<<<<<< HEAD
         all_features[numeric_features] = self.scaler.transform(all_features[numeric_features])#用之前拟合好的标准器标准化这些数值特征
+=======
+        all_features[numeric_features] = self.scaler.transform(all_features[numeric_features])
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         
         return all_features
     
@@ -216,10 +270,17 @@ class WeatherDataProcessor:
         # 计算需要的数据长度
         required_length = input_hours + output_hours
         
+<<<<<<< HEAD
         # 使用时间滑动窗口创建多个序列
         for i in range(len(df) - required_length + 1):#循环从0开始，每次加1输出
             # 获取输入序列
             seq = df[feature_columns].iloc[i:i+input_hours].values#每次取168小时数据
+=======
+        # 使用滑动窗口创建多个序列
+        for i in range(len(df) - required_length + 1):
+            # 获取输入序列
+            seq = df[feature_columns].iloc[i:i+input_hours].values
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
             sequences.append(seq)
             
             # 获取目标序列
@@ -230,7 +291,11 @@ class WeatherDataProcessor:
     
     def inverse_transform_weather(self, encoded_weather):
         """将连续索引转换回原始天气代码"""
+<<<<<<< HEAD
         if isinstance(encoded_weather, torch.Tensor):#检查输入是否为py的张量，是则换成numpy数组
+=======
+        if isinstance(encoded_weather, torch.Tensor):
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
             encoded_weather = encoded_weather.cpu().numpy()
         return np.array([self.index_to_weather_code[idx] for idx in encoded_weather])
     
@@ -264,19 +329,28 @@ class WeatherDataProcessor:
         if scaled_targets.ndim == 1:
             scaled_targets = scaled_targets.reshape(1, -1)
         
+<<<<<<< HEAD
         # 手动进行反标准化，使用反标准化公式，没有使用库函数
+=======
+        # 手动进行反标准化
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         original_targets = scaled_targets * target_stds + target_means
         
         # 确保温度和湿度在合理范围内
         original_targets[:, 0] = np.clip(original_targets[:, 0], -20, 40)  # 温度范围
         original_targets[:, 1] = np.clip(original_targets[:, 1], 0, 100)   # 湿度范围
         
+<<<<<<< HEAD
         # 对降水量进行指数变换，并确保非负
         # 首先限制对数空间的值，避免过小的负值
         original_targets[:, 2] = np.clip(original_targets[:, 2], -2.0, None)  # 限制最小值为-2.0
         original_targets[:, 2] = np.expm1(original_targets[:, 2])#np.log1p的反函数
         # 确保降水量非负
         original_targets[:, 2] = np.maximum(original_targets[:, 2], 0.0)
+=======
+        # 对降水量进行指数变换
+        original_targets[:, 2] = np.expm1(original_targets[:, 2])
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         
         return original_targets
 
@@ -285,23 +359,39 @@ class WeatherDataProcessor:
         # 如果有降雨，根据降雨量确定天气代码
         if isinstance(rain, (np.ndarray, list)):
             if len(rain.shape) > 0:
+<<<<<<< HEAD
                 rain = rain[0]#如果是多维数组则取第一个元素
             rain = float(rain)#将元素转换成可以直接处理的浮点数
+=======
+                rain = rain[0]
+            rain = float(rain)
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         if isinstance(cloud, (np.ndarray, list)):
             if len(cloud.shape) > 0:
                 cloud = cloud[0]
             cloud = float(cloud)
             
         # 将天气代码转换为原始代码
+<<<<<<< HEAD
         original_code = self.index_to_weather_code[weather_code]#索引转换成代码
             
         # 检查天气代码和降雨量是否一致
         is_rainy_weather = original_code in [51, 53, 55, 61, 63, 65]#判断天气代码和降水量是否一致
+=======
+        original_code = self.index_to_weather_code[weather_code]
+            
+        # 检查天气代码和降雨量是否一致
+        is_rainy_weather = original_code in [51, 53, 55, 61, 63, 65]
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         
         # 如果天气代码表示有雨但实际没有雨，或者天气代码表示无雨但实际有雨，则进行调整
         if (is_rainy_weather and rain <= 0) or (not is_rainy_weather and rain > 0):
             if rain > 0:
+<<<<<<< HEAD
                 for threshold, code in reversed(self.rain_thresholds):#从最小的阈值开始检查，找到第一个满足条件的阈值则选择该代码
+=======
+                for threshold, code in reversed(self.rain_thresholds):
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
                     if rain >= threshold:
                         return self.weather_code_to_index[code]
             else:
@@ -311,8 +401,13 @@ class WeatherDataProcessor:
         
         return weather_code  # 如果天气代码和降雨量一致，保持原始预测的天气代码
 
+<<<<<<< HEAD
 class WeatherDataset(Dataset):#将数据转换成py可用格式，提供数据访问接口，可以被py的dataloader使用，标准写法
     def __init__(self, sequences, targets):#确保数据类型为浮点值，讲np转换成py张量
+=======
+class WeatherDataset(Dataset):
+    def __init__(self, sequences, targets):
+>>>>>>> 69f64fa2f4f09ebc088dc7a8e174736a027c9345
         self.sequences = torch.FloatTensor(sequences)
         self.targets = torch.FloatTensor(targets)
     
